@@ -18,7 +18,9 @@ function canvas(){
  return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0}),calls,uploads:()=>uploads});
 }
 function run(ms){for(let elapsed=0;elapsed<ms;elapsed+=20){now+=20;const pending=[...raf.values()];raf.clear();pending.forEach(fn=>fn(now))}}
-const root={dataset:{reduced:'false'}},base=canvas(),subject=canvas();
+const shade={};let shadeOpacity='0.65';
+globalThis.getComputedStyle=()=>({opacity:shadeOpacity});
+const root={dataset:{reduced:'false'},querySelector:()=>shade},base=canvas(),subject=canvas();
 const video={readyState:4,seeking:false,paused:true,currentTime:4.333333,videoWidth:3840,videoHeight:2160,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0})};
 const ambient=createFilmAtmosphere(root,base,subject,video);
 ambient.setMode('idle');ambient.frame(video.currentTime);run(11000);
@@ -26,6 +28,7 @@ assert.equal(video.paused,true);assert.equal(video.currentTime,4.333333,'idle ef
 assert.ok(base.calls.length>200,'held frame keeps redrawing without scroll or video callbacks');
 assert.equal(base.uploads(),1,'held 4K frame is uploaded only once');
 assert.deepEqual(base.calls.at(-1).filmSize,[3840,2160],'reconstruction uses native source texels');
+assert.equal(base.calls.at(-1).shadeOpacity,.65,'CSS shade timing is preserved in the floating-point compositor');
 base.getBoundingClientRect=()=>({width:2880,height:1800,left:0,top:0});run(80);
 assert.equal(base.width,5760,'large Retina displays must not stretch a 3840px canvas');
 assert.equal(base.height,3600);
@@ -39,6 +42,8 @@ ambient.setMode('transition');ambient.frame(5);run(2000);
 assert.ok(base.calls.at(-1).steam<.002,'idle treatment fades out during the next scene');assert.equal(raf.size,0);
 video.currentTime=8.7;ambient.setMode('idle');ambient.frame(8.7);run(1000);
 assert.ok(subject.calls.length>10);assert.equal(base.calls.at(-1).breath,subject.calls.at(-1).breath,'foreground and background remain aligned');
+assert.equal(subject.calls.at(-1).shadeOpacity,0,'the foreground must never receive the background gradient');
+shadeOpacity='0';run(80);assert.equal(base.calls.at(-1).shadeOpacity,0,'intro shade animation reaches a transparent endpoint');
 doc.hidden=true;doc.dispatchEvent(new Event('visibilitychange'));assert.equal(raf.size,0);
 const count=base.calls.length;run(1000);assert.equal(base.calls.length,count);
 doc.hidden=false;doc.dispatchEvent(new Event('visibilitychange'));run(1000);assert.ok(base.calls.length>count);

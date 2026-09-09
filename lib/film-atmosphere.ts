@@ -18,6 +18,7 @@ uniform float clock;
 uniform float foregroundOnly;
 uniform vec4 filmRect;
 uniform vec2 filmSize;
+uniform float shadeOpacity;
 // Catmull-Rom reconstruction retains fine towel/fabric detail through the
 // breathing warp and Retina enlargement. Nine bilinear taps replace sixteen
 // separate texel reads; this does not manufacture new source detail.
@@ -43,6 +44,36 @@ vec4 sampleFilm(vec2 p){
   c+=texture2D(film,vec2(p12.x,p3.y))*w12.x*w3.y;
   c+=texture2D(film,p3)*w3.x*w3.y;
   return clamp(c,0.0,1.0);
+}
+vec3 refineSubject(vec2 p,vec3 c){
+  // Limit the treatment to the original dark subject. Use native texels,
+  // never screen pixels, so the result is consistent across display sizes.
+  float mask=1.0-smoothstep(.46,.78,c.r);
+  if(mask<.001)return c;
+  vec2 d=vec2(2.25)/filmSize;
+  vec3 a=texture2D(film,p+vec2(d.x,0.0)).rgb;
+  vec3 b=texture2D(film,p-vec2(d.x,0.0)).rgb;
+  vec3 e=texture2D(film,p+vec2(0.0,d.y)).rgb;
+  vec3 f=texture2D(film,p-vec2(0.0,d.y)).rgb;
+  vec3 low=min(c,min(min(a,b),min(e,f))),high=max(c,max(max(a,b),max(e,f)));
+  float contrast=high.r-low.r;
+  vec3 average=(a+b+e+f)*.25;
+  // Smooth only nearly uniform compressed shadows; retain actual texture.
+  vec3 clean=mix(c,average,.3*(1.0-smoothstep(.004,.022,contrast)));
+  float edgeGuard=1.0-smoothstep(.08,.24,contrast);
+  vec3 detail=clamp((c-average)*.7,vec3(-.025),vec3(.035))*edgeGuard;
+  vec3 crisp=clamp(clean+detail,low,high);
+  // Open existing shadow detail without lifting pure black or changing hue.
+  float peak=max(crisp.r,max(crisp.g,crisp.b));
+  float gain=min(1.65,pow(max(peak,.001),-.15));
+  return mix(c,clamp(crisp*gain,0.0,1.0),mask);
+}
+vec3 finishColor(vec3 c){
+  // Sub-LSB, stationary dithering breaks up 8-bit tonal steps. Apply after
+  // grading and the page's dark gradient, without animated grain/flicker.
+  float n=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
+  float active=smoothstep(.002,.02,max(c.r,max(c.g,c.b)));
+  return clamp(c+vec3(n/255.0)*active,0.0,1.0);
 }
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 vec2 gradient(vec2 p){
@@ -76,11 +107,15 @@ void main(){
     sampleUV=clamp(sceneUV,vec2(.116,0.0),vec2(.884,1.0));
   }
   vec4 c=sampleFilm(sampleUV);
+  // Extract the foreground matte before changing tones: brighter fabric
+  // must not become transparent or expose the logo through the subject.
+  float subject=1.0-smoothstep(.10,.69,c.r);
+  float behind=smoothstep(.65,.89,c.r);
+  if(!outside)c.rgb=refineSubject(sampleUV,c.rgb);
   // A portrait viewport can continue below the source frame. Blend its last
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
-  float subject=1.0-smoothstep(.10,.69,c.r);
-  if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
+  if(foregroundOnly>.5){gl_FragColor=vec4(finishColor(c.rgb),outside?0.0:subject);return;}
   // Clearly visible red-lit vapor, with feathered edges and tall, irregular
   // wisps. Keep the silhouette clear while the flow disperses at the top.
   vec2 vaporUV=sceneUV;
@@ -94,12 +129,14 @@ void main(){
   float edges=smoothstep(.10,.115,vaporUV.x)*(1.0-smoothstep(.885,.90,vaporUV.x));
   float height=smoothstep(.025,.18,vaporUV.y)*(1.0-smoothstep(.80,1.0,vaporUV.y));
   // Red-background key keeps the vapor off the original dark silhouette.
-  float behind=smoothstep(.65,.89,c.r);
   float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.41;
-  gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.82,.75),alpha),1.0);
+  vec3 color=mix(c.rgb,vec3(1.0,.82,.75),alpha);
+  // Match the existing CSS gradient in floating point, before quantization.
+  color*=1.0-clamp((uv.y-.35)/.65,0.0,1.0)*shadeOpacity;
+  gl_FragColor=vec4(finishColor(color),1.0);
 }`;
 
-type Layer={draw:(breath:number,steam:number,time:number)=>void;dispose:()=>void};
+type Layer={draw:(breath:number,steam:number,time:number,shade:number)=>void;dispose:()=>void};
 function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:boolean):Layer|null {
   const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
   if(!gl)return null;
@@ -123,13 +160,13 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
     texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect'),sizeLocation=gl.getUniformLocation(program,'filmSize');
+    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect'),sizeLocation=gl.getUniformLocation(program,'filmSize'),shadeLocation=gl.getUniformLocation(program,'shadeOpacity');
     const viewportLimit=gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
     const bufferLimit=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
     const maxWidth=Math.min(viewportLimit[0],bufferLimit),maxHeight=Math.min(viewportLimit[1],bufferLimit);
     gl.uniform1f(gl.getUniformLocation(program,'foregroundOnly'),foreground?1:0);
     let uploadedTime=-1,textureReady=false;
-    return {dispose,draw:(breath,steam,time)=>{
+    return {dispose,draw:(breath,steam,time,shade)=>{
       if(video.readyState<2||video.seeking||gl.isContextLost())return;
       // The texture remains native 4K. The display buffer must also cover
       // physical screen pixels, including DPR 3 phones and 5K/6K desktops.
@@ -143,6 +180,7 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
       gl.uniform2f(sizeLocation,video.videoWidth,video.videoHeight);
       gl.uniform4f(rectLocation,(filmBounds.left-rect.left)/rect.width,(filmBounds.top-rect.top)/rect.height,filmBounds.width/rect.width,filmBounds.height/rect.height);
       gl.uniform1f(breathLocation,breath);gl.uniform1f(steamLocation,steam);gl.uniform1f(clockLocation,time);
+      gl.uniform1f(shadeLocation,shade);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     }};
   }catch{dispose();return null}
@@ -151,6 +189,7 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
 /** Idle motion changes the presentation of the held frame, never the film's
  * playhead or scene stop. Both canvas layers use the same breathing phase. */
 export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,foreground:HTMLCanvasElement,video:HTMLVideoElement){
+  const shade=root.querySelector<HTMLElement>('.scene-shade');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const base=reduced?null:createLayer(canvas,video,false);
   const subject=base?createLayer(foreground,video,true):null;
@@ -161,8 +200,9 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
     if(!enabled()||mediaTime<3.9||video.readyState<2||video.seeking)return;
     const breath=(1-Math.cos(idleTime*Math.PI*2/4.2))*.5*strength;
     try{
-      base!.draw(breath,strength,now/1000);
-      if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000);
+      const shadeAlpha=shade?Number.parseFloat(getComputedStyle(shade).opacity)||0:0;
+      base!.draw(breath,strength,now/1000,shadeAlpha);
+      if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000,0);
       root.dataset.atmosphere='true';
     }catch{available=false;root.dataset.atmosphere='false'}
   }

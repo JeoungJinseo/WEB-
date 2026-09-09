@@ -35,6 +35,7 @@
 /* Idle breathing and vapor are composited from the original held video frame. */
 .film-page[data-painted=true] .ambient-film{opacity:0}
 .film-page[data-atmosphere=true][data-painted=true] .ambient-film{opacity:1}
+.film-page[data-atmosphere=true] .scene-shade{visibility:hidden}
 .film-page[data-atmosphere=false] .foreground{visibility:hidden}
 
 

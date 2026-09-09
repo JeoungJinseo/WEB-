@@ -15,6 +15,7 @@ uniform float breath;
 uniform float steam;
 uniform float clock;
 uniform float foregroundOnly;
+uniform vec4 filmRect;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){
   vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
@@ -22,18 +23,26 @@ float noise(vec2 p){
 }
 float mist(vec2 p){return noise(p)*.57+noise(p*2.03+7.2)*.28+noise(p*4.07+19.1)*.15;}
 void main(){
+  vec2 sceneUV=(uv-filmRect.xy)/filmRect.zw;
+  bool outside=sceneUV.x<.116||sceneUV.x>.884||sceneUV.y<0.0||sceneUV.y>1.0;
   // Carry the head upward as one rigid region with the inhale. On a wide
   // screen the torso is cropped out, so torso-only motion cannot be seen.
   // The face keeps its proportions; the shoulders expand below the neck.
-  float torso=smoothstep(.48,.64,uv.y)*(1.0-smoothstep(.88,1.0,uv.y));
-  float lift=smoothstep(.015,.06,uv.y)*(1.0-smoothstep(.70,1.0,uv.y));
-  float center=smoothstep(.13,.30,uv.x)*(1.0-smoothstep(.76,.88,uv.x));
-  vec2 sampleUV=uv;
-  sampleUV.x=.5+(uv.x-.5)/(1.0+breath*.016*torso);
+  float torso=smoothstep(.48,.64,sceneUV.y)*(1.0-smoothstep(.88,1.0,sceneUV.y));
+  float lift=smoothstep(.015,.06,sceneUV.y)*(1.0-smoothstep(.70,1.0,sceneUV.y));
+  float center=smoothstep(.13,.30,sceneUV.x)*(1.0-smoothstep(.76,.88,sceneUV.x));
+  vec2 sampleUV=sceneUV;
+  sampleUV.x=.5+(sceneUV.x-.5)/(1.0+breath*.016*torso);
   sampleUV.y+=breath*(.006*lift*center+.004*torso);
+  // Extend the existing red at the edges, never enlarge/crop the character.
+  if(outside){
+    sampleUV=vec2(sceneUV.x<.5?.116:.884,clamp(sceneUV.y,.015,.985));
+  }
   vec4 c=texture2D(film,sampleUV);
+  // Portrait layouts reserve a reading area below the complete scene.
+  if(filmRect.w<.55)c.rgb*=1.0-smoothstep(.82,1.0,sceneUV.y);
   float subject=1.0-smoothstep(.10,.69,c.r);
-  if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,subject);return;}
+  if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
   // Upward advection, irregular wisps and soft columns behind both shoulders.
   float sway=sin(uv.y*11.0-clock*.38)*.025;
   float columns=exp(-pow((uv.x-.31-sway)/.082,2.0))
@@ -75,7 +84,7 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
     texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock');
+    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect');
     gl.uniform1f(gl.getUniformLocation(program,'foregroundOnly'),foreground?1:0);
     let uploadedTime=-1,textureReady=false;
     return {dispose,draw:(breath,steam,time)=>{
@@ -84,11 +93,13 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
       // beyond the display density on phones. The source texture is unchanged.
       const rect=canvas.getBoundingClientRect();
       const width=Math.min(video.videoWidth,Math.max(1,Math.round(rect.width*Math.min(devicePixelRatio||1,2))));
-      const height=Math.round(width*video.videoHeight/video.videoWidth);
+      const height=Math.max(1,Math.round(width*rect.height/rect.width));
       if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;gl.viewport(0,0,width,height)}
       if(!textureReady||uploadedTime!==video.currentTime){
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);uploadedTime=video.currentTime;textureReady=true;
       }
+      const filmBounds=video.getBoundingClientRect();
+      gl.uniform4f(rectLocation,(filmBounds.left-rect.left)/rect.width,(filmBounds.top-rect.top)/rect.height,filmBounds.width/rect.width,filmBounds.height/rect.height);
       gl.uniform1f(breathLocation,breath);gl.uniform1f(steamLocation,steam);gl.uniform1f(clockLocation,time);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     }};

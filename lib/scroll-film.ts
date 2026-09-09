@@ -1,3 +1,4 @@
+import {filmLayout} from './film-layout.ts';
 /** Native video playback between fixed scene stops. One gesture advances one
  * scene; the original decoder and media remain continuous across the handoff. */
 export const LAST_FRAME = 343 / 24;
@@ -23,12 +24,13 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function paint(t:number) {
     root.dataset.time=t.toFixed(3);
     root.style.setProperty('--progress',String(clamp((t-INTRO_END)/(SCENE_STOPS[2]-INTRO_END))));
-    const x=clamp((t-3.2)/.7), blend=x*x*(3-2*x);
-    const introWidth=Math.min(innerWidth,innerHeight*16/9);
-    const fullWidth=Math.max(innerWidth/(3036/3840),innerHeight*16/9);
-    const renderWidth=introWidth+(fullWidth-introWidth)*blend;
-    root.style.setProperty('--film-width',`${renderWidth}px`);
-    root.style.setProperty('--film-top',`${(innerHeight-renderWidth*9/16)*.5*(1-blend)}px`);
+    const fit=filmLayout(innerWidth,innerHeight,t);
+    root.style.setProperty('--film-width',`${fit.filmWidth}px`);
+    root.style.setProperty('--film-top',`${fit.filmTop}px`);
+    root.style.setProperty('--composition-width',`${fit.compositionWidth}px`);
+    root.style.setProperty('--composition-height',`${fit.compositionHeight}px`);
+    root.style.setProperty('--composition-top',`${fit.compositionTop}px`);
+    root.style.setProperty('--copy-top',`${fit.copyTop}px`);
     root.style.setProperty('--intro-fade',String(1-clamp((t-3.8)/.25)));
     setScene(t);onFrame(t);
   }
@@ -97,7 +99,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   }
   async function load(){
     try{
-      const response=await fetch('/assets/hero-scrub-4k.mp4',{signal:controller.signal});
+      const response=await fetch('./assets/hero-scrub-4k.mp4',{signal:controller.signal});
       if(!response.ok)throw new Error('film unavailable');
       const blob=await response.blob();if(disposed)return;
       blobUrl=URL.createObjectURL(blob);video.src=blobUrl;video.load();
@@ -106,6 +108,8 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function metadata(){if(disposed)return;ready=true;onReady();void playForward('intro')}
   function wheel(event:WheelEvent){
     if(event.ctrlKey||Math.abs(event.deltaX)>Math.abs(event.deltaY))return;
+    const content=event.target instanceof Element?event.target.closest<HTMLElement>('.content-frame'):null;
+    if(content&&content.scrollHeight>content.clientHeight+2)return;
     event.preventDefault();const now=performance.now(),quiet=now-lastWheel>180;lastWheel=now;
     if(quiet){wheelDistance=0;wheelTriggered=false}
     if(mode!=='idle'||now<inputAfter){wheelDistance=0;wheelTriggered=true;return}
@@ -115,6 +119,8 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     if(Math.abs(wheelDistance)>=32){wheelTriggered=true;step(Math.sign(wheelDistance));wheelDistance=0}
   }
   function touchstart(event:TouchEvent){
+    const content=event.target instanceof Element?event.target.closest<HTMLElement>('.content-frame'):null;
+    if(content&&content.scrollHeight>content.clientHeight+2){touchY=null;return}
     if(event.touches.length!==1){touchY=null;return}
     touchY=event.touches[0].clientY;touchX=event.touches[0].clientX;
   }

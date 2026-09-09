@@ -11,13 +11,13 @@ function canvas(){
   createProgram:()=>({}),attachShader(){},linkProgram(){},getProgramParameter:()=>true,useProgram(){},deleteProgram(){},
   createBuffer:()=>({}),bindBuffer(){},bufferData(){},deleteBuffer(){},getAttribLocation:()=>0,enableVertexAttribArray(){},vertexAttribPointer(){},
   createTexture:()=>({}),bindTexture(){},texParameteri(){},deleteTexture(){},getUniformLocation:(_,name)=>name,
-  uniform1f:(name,value)=>{uniforms[name]=value},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
+  uniform1f:(name,value)=>{uniforms[name]=value},uniform4f(){},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
  };
- return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920}),calls,uploads:()=>uploads});
+ return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0}),calls,uploads:()=>uploads});
 }
 function run(ms){for(let elapsed=0;elapsed<ms;elapsed+=20){now+=20;const pending=[...raf.values()];raf.clear();pending.forEach(fn=>fn(now))}}
 const root={dataset:{reduced:'false'}},base=canvas(),subject=canvas();
-const video={readyState:4,seeking:false,paused:true,currentTime:4.333333,videoWidth:3840,videoHeight:2160};
+const video={readyState:4,seeking:false,paused:true,currentTime:4.333333,videoWidth:3840,videoHeight:2160,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0})};
 const ambient=createFilmAtmosphere(root,base,subject,video);
 ambient.setMode('idle');ambient.frame(video.currentTime);run(11000);
 assert.equal(video.paused,true);assert.equal(video.currentTime,4.333333,'idle effect must never advance the film');

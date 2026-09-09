@@ -45,9 +45,18 @@ vec4 sampleFilm(vec2 p){
   return clamp(c,0.0,1.0);
 }
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+vec2 gradient(vec2 p){
+  // Eight directions avoid value-noise's rectangular cloudy patches.
+  float h=floor(hash(p)*8.0);
+  vec2 g=vec2(mod(h,2.0)*2.0-1.0,mod(floor(h*.5),2.0)*2.0-1.0);
+  if(h>=4.0)g=h<6.0?vec2(g.x,0.0):vec2(0.0,g.x);
+  return g;
+}
 float noise(vec2 p){
-  vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
-  return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+1.0),f.x),f.y);
+  vec2 i=floor(p),f=fract(p),s=f*f*f*(f*(f*6.0-15.0)+10.0);
+  float n=mix(mix(dot(gradient(i),f),dot(gradient(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),s.x),
+    mix(dot(gradient(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),dot(gradient(i+1.0),f-1.0),s.x),s.y);
+  return .5+.7*n;
 }
 float mist(vec2 p){return noise(p)*.57+noise(p*2.03+7.2)*.28+noise(p*4.07+19.1)*.15;}
 void main(){
@@ -72,22 +81,22 @@ void main(){
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
   float subject=1.0-smoothstep(.10,.69,c.r);
   if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
-  // Dilute, red-lit vapor: slow upward flow disperses before reaching the
-  // top. Avoid opaque white smoke or a uniformly fogged-over silhouette.
+  // Clearly visible red-lit vapor, with feathered edges and tall, irregular
+  // wisps. Keep the silhouette clear while the flow disperses at the top.
   vec2 vaporUV=sceneUV;
   float sway=sin(vaporUV.y*8.0-clock*.24)*.018;
-  float columns=exp(-pow((vaporUV.x-.31-sway)/.082,2.0))
-    +exp(-pow((vaporUV.x-.72+sway)/.087,2.0));
+  float columns=exp(-pow((vaporUV.x-.31-sway)/.094,2.0))
+    +exp(-pow((vaporUV.x-.72+sway)/.099,2.0));
   vec2 flow=vaporUV*vec2(22.0,6.5)+vec2(clock*.025,clock*.23);
-  flow.x+=(noise(flow*.45+vec2(0.0,clock*.055))-.5)*1.9;
-  float vapor=smoothstep(.40,.74,mist(flow));
+  flow+=(vec2(noise(flow*.45+vec2(0.0,clock*.055)),noise(flow*.45+vec2(8.3,clock*.04)))-.5)*2.4;
+  float vapor=smoothstep(.39,.69,mist(flow));
   vapor*=.65+.35*noise(flow*vec2(.8,1.7)+13.4);
   float edges=smoothstep(.10,.115,vaporUV.x)*(1.0-smoothstep(.885,.90,vaporUV.x));
   float height=smoothstep(.025,.18,vaporUV.y)*(1.0-smoothstep(.80,1.0,vaporUV.y));
   // Red-background key keeps the vapor off the original dark silhouette.
   float behind=smoothstep(.65,.89,c.r);
-  float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.28;
-  gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.68,.60),alpha),1.0);
+  float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.48;
+  gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.82,.75),alpha),1.0);
 }`;
 
 type Layer={draw:(breath:number,steam:number,time:number)=>void;dispose:()=>void};

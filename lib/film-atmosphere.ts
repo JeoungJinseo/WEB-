@@ -1,4 +1,5 @@
 import type {FilmMode} from './scroll-film';
+import {filmResolution} from './film-resolution.ts';
 
 const VERTEX=`
 attribute vec2 position;
@@ -16,6 +17,33 @@ uniform float steam;
 uniform float clock;
 uniform float foregroundOnly;
 uniform vec4 filmRect;
+uniform vec2 filmSize;
+// Catmull-Rom reconstruction retains fine towel/fabric detail through the
+// breathing warp and Retina enlargement. Nine bilinear taps replace sixteen
+// separate texel reads; this does not manufacture new source detail.
+vec4 sampleFilm(vec2 p){
+  vec2 pixel=p*filmSize;
+  vec2 center=floor(pixel-.5)+.5;
+  vec2 f=pixel-center;
+  vec2 w0=f*(-.5+f*(1.0-.5*f));
+  vec2 w1=1.0+f*f*(-2.5+1.5*f);
+  vec2 w2=f*(.5+f*(2.0-1.5*f));
+  vec2 w3=f*f*(-.5+.5*f);
+  vec2 w12=w1+w2;
+  vec2 p0=(center-1.0)/filmSize;
+  vec2 p12=(center+w2/w12)/filmSize;
+  vec2 p3=(center+2.0)/filmSize;
+  vec4 c=texture2D(film,p0)*w0.x*w0.y;
+  c+=texture2D(film,vec2(p12.x,p0.y))*w12.x*w0.y;
+  c+=texture2D(film,vec2(p3.x,p0.y))*w3.x*w0.y;
+  c+=texture2D(film,vec2(p0.x,p12.y))*w0.x*w12.y;
+  c+=texture2D(film,p12)*w12.x*w12.y;
+  c+=texture2D(film,vec2(p3.x,p12.y))*w3.x*w12.y;
+  c+=texture2D(film,vec2(p0.x,p3.y))*w0.x*w3.y;
+  c+=texture2D(film,vec2(p12.x,p3.y))*w12.x*w3.y;
+  c+=texture2D(film,p3)*w3.x*w3.y;
+  return clamp(c,0.0,1.0);
+}
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){
   vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
@@ -38,29 +66,28 @@ void main(){
   if(outside){
     sampleUV=clamp(sceneUV,vec2(.116,0.0),vec2(.884,1.0));
   }
-  vec4 c=texture2D(film,sampleUV);
+  vec4 c=sampleFilm(sampleUV);
   // A portrait viewport can continue below the source frame. Blend its last
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
   float subject=1.0-smoothstep(.10,.69,c.r);
   if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
-  // Upward advection, irregular wisps and soft columns behind both shoulders.
-  // Keep the vapor behind the subject when the artboard is fitted.
+  // Dilute, red-lit vapor: slow upward flow disperses before reaching the
+  // top. Avoid opaque white smoke or a uniformly fogged-over silhouette.
   vec2 vaporUV=sceneUV;
-  float sway=sin(vaporUV.y*11.0-clock*.38)*.025;
+  float sway=sin(vaporUV.y*8.0-clock*.24)*.018;
   float columns=exp(-pow((vaporUV.x-.31-sway)/.082,2.0))
-    +exp(-pow((vaporUV.x-.72+sway)/.085,2.0))
-    +.25*exp(-pow((vaporUV.x-.50-sway)/.13,2.0));
-  vec2 flow=vaporUV*vec2(16.0,9.0)+vec2(clock*.035,clock*.36);
-  flow.x+=(noise(flow*.55+vec2(0.0,clock*.08))-.5)*1.6;
-  // Narrow, separated wisps reveal upward motion instead of a static haze.
-  float vapor=smoothstep(.47,.72,mist(flow));
+    +exp(-pow((vaporUV.x-.72+sway)/.087,2.0));
+  vec2 flow=vaporUV*vec2(22.0,6.5)+vec2(clock*.025,clock*.23);
+  flow.x+=(noise(flow*.45+vec2(0.0,clock*.055))-.5)*1.9;
+  float vapor=smoothstep(.40,.74,mist(flow));
+  vapor*=.65+.35*noise(flow*vec2(.8,1.7)+13.4);
   float edges=smoothstep(.10,.115,vaporUV.x)*(1.0-smoothstep(.885,.90,vaporUV.x));
-  float height=smoothstep(.015,.12,vaporUV.y)*(1.0-smoothstep(.86,1.0,vaporUV.y));
+  float height=smoothstep(.025,.18,vaporUV.y)*(1.0-smoothstep(.80,1.0,vaporUV.y));
   // Red-background key keeps the vapor off the original dark silhouette.
   float behind=smoothstep(.65,.89,c.r);
-  float alpha=min(columns,1.2)*vapor*height*edges*behind*steam*.40;
-  gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.82,.78),alpha),1.0);
+  float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.28;
+  gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.68,.60),alpha),1.0);
 }`;
 
 type Layer={draw:(breath:number,steam:number,time:number)=>void;dispose:()=>void};
@@ -87,21 +114,24 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
     texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect');
+    const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect'),sizeLocation=gl.getUniformLocation(program,'filmSize');
+    const viewportLimit=gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+    const bufferLimit=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
+    const maxWidth=Math.min(viewportLimit[0],bufferLimit),maxHeight=Math.min(viewportLimit[1],bufferLimit);
     gl.uniform1f(gl.getUniformLocation(program,'foregroundOnly'),foreground?1:0);
     let uploadedTime=-1,textureReady=false;
     return {dispose,draw:(breath,steam,time)=>{
       if(video.readyState<2||video.seeking||gl.isContextLost())return;
-      // Retain native 4K on large displays; do not render unnecessary pixels
-      // beyond the display density on phones. The source texture is unchanged.
+      // The texture remains native 4K. The display buffer must also cover
+      // physical screen pixels, including DPR 3 phones and 5K/6K desktops.
       const rect=canvas.getBoundingClientRect();
-      const width=Math.min(video.videoWidth,Math.max(1,Math.round(rect.width*Math.min(devicePixelRatio||1,2))));
-      const height=Math.max(1,Math.round(width*rect.height/rect.width));
+      const {width,height}=filmResolution(rect.width,rect.height,devicePixelRatio,maxWidth,maxHeight);
       if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;gl.viewport(0,0,width,height)}
       if(!textureReady||uploadedTime!==video.currentTime){
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);uploadedTime=video.currentTime;textureReady=true;
       }
       const filmBounds=video.getBoundingClientRect();
+      gl.uniform2f(sizeLocation,video.videoWidth,video.videoHeight);
       gl.uniform4f(rectLocation,(filmBounds.left-rect.left)/rect.width,(filmBounds.top-rect.top)/rect.height,filmBounds.width/rect.width,filmBounds.height/rect.height);
       gl.uniform1f(breathLocation,breath);gl.uniform1f(steamLocation,steam);gl.uniform1f(clockLocation,time);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);

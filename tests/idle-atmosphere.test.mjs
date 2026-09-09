@@ -11,7 +11,9 @@ function canvas(){
   createProgram:()=>({}),attachShader(){},linkProgram(){},getProgramParameter:()=>true,useProgram(){},deleteProgram(){},
   createBuffer:()=>({}),bindBuffer(){},bufferData(){},deleteBuffer(){},getAttribLocation:()=>0,enableVertexAttribArray(){},vertexAttribPointer(){},
   createTexture:()=>({}),bindTexture(){},texParameteri(){},deleteTexture(){},getUniformLocation:(_,name)=>name,
-  uniform1f:(name,value)=>{uniforms[name]=value},uniform4f(){},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
+  MAX_VIEWPORT_DIMS:0x0d3a,MAX_RENDERBUFFER_SIZE:0x84e8,
+  getParameter:key=>key===0x0d3a?new Int32Array([16384,16384]):16384,
+  uniform1f:(name,value)=>{uniforms[name]=value},uniform2f:(name,x,y)=>{uniforms[name]=[x,y]},uniform4f(){},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
  };
  return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0}),calls,uploads:()=>uploads});
 }
@@ -23,6 +25,13 @@ ambient.setMode('idle');ambient.frame(video.currentTime);run(11000);
 assert.equal(video.paused,true);assert.equal(video.currentTime,4.333333,'idle effect must never advance the film');
 assert.ok(base.calls.length>200,'held frame keeps redrawing without scroll or video callbacks');
 assert.equal(base.uploads(),1,'held 4K frame is uploaded only once');
+assert.deepEqual(base.calls.at(-1).filmSize,[3840,2160],'reconstruction uses native source texels');
+base.getBoundingClientRect=()=>({width:2880,height:1800,left:0,top:0});run(80);
+assert.equal(base.width,5760,'large Retina displays must not stretch a 3840px canvas');
+assert.equal(base.height,3600);
+globalThis.devicePixelRatio=3;base.getBoundingClientRect=()=>({width:390,height:844,left:0,top:0});run(80);
+assert.equal(base.width,1170,'DPR 3 phones keep all physical pixels');assert.equal(base.height,2532);
+globalThis.devicePixelRatio=2;
 assert.ok(Math.max(...base.calls.map(c=>c.breath))>.98);
 assert.ok(new Set(base.calls.map(c=>c.breath.toFixed(3))).size>100,'breathing continues through multiple cycles');
 assert.ok(base.calls.at(-1).clock-base.calls[0].clock>10,'steam keeps rising while the video is paused');

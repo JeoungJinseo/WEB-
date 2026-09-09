@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {mountScrollFilm,createForeground,progressAtTime,type Scene} from '../lib/scroll-film';
+import {mountScrollFilm,createForeground,type Scene,type FilmMode} from '../lib/scroll-film';
 
 function Reveal({children,order=0,className=''}:{children:ReactNode;order?:number;className?:string}) {
  return <span className={`reveal ${className}`} style={{'--order':order} as CSSProperties}><span>{children}</span></span>;
@@ -14,23 +14,26 @@ function Collab({red=false}:{red?:boolean}) {
 function Team(){return <div className="team"><span><small>Team Leader / Art Director</small> Kim Gwanwu</span><span><small>BRANDING / UX MANAGER</small> JEOUMG JINSEO</span><span><small>INTERACTION / GRAPHIC DESIGNER</small> JEONG JUNYONG</span></div>}
 export default function Home() {
  const root=useRef<HTMLElement>(null),video=useRef<HTMLVideoElement>(null),foreground=useRef<HTMLCanvasElement>(null);
+ const player=useRef<ReturnType<typeof mountScrollFilm>|null>(null);
  const [scene,setScene]=useState<Scene>('intro'),[ready,setReady]=useState(false),[failed,setFailed]=useState(false);
+ const [mode,setMode]=useState<FilmMode>('intro');
  useEffect(()=>{
   if(!root.current||!video.current||!foreground.current)return;
   const draw=createForeground(foreground.current,video.current);
-  const dispose=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:t=>{if(t>=6.6&&t<=11.9)draw()}});
-  return ()=>{dispose();draw(true)};
+  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:setMode,onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:t=>{if(t>=6.6&&t<=11.9)draw()}});
+  player.current=film;
+  return ()=>{player.current=null;film.dispose();draw(true)};
  },[]);
  const jump=(time:number)=>{
-  const height=(root.current?.offsetHeight??innerHeight*10)-innerHeight;
-  window.scrollTo({top:progressAtTime(time)*height,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+  if(time===0){player.current?.replayIntro();return}
+  player.current?.goTo(time);
  };
  const intro=scene==='intro',profile=scene==='profile';
- return <main ref={root} className="film-page" data-scene={scene} aria-label="OVEN SAUNA 스크롤 필름">
+ return <main ref={root} className="film-page" data-scene={scene} aria-label="OVEN SAUNA 장면별 영상">
   <div className="stage">
    <img className="film-poster" src="/assets/intro.jpg" alt=""/>
    <img className="scene-image still-fallback" src={`/assets/${intro?'back':scene}.png`} alt=""/>
-   <video ref={video} className="film-media" muted playsInline preload="none" aria-label="OVEN SAUNA — 스크롤에 따라 재생되는 영상"/>
+   <video ref={video} className="film-media" muted playsInline preload="none" aria-label="OVEN SAUNA — 인트로 자동 재생 후 한 번 스크롤할 때 다음 장면까지 재생되는 영상"/>
    <div className="scene-shade"/>
    <div className={`profile-wordmark ${profile?'is-active':''}`} aria-hidden="true"><Reveal order={3}><img src="/assets/wordmark-wide.svg" alt=""/></Reveal></div>
    <canvas ref={foreground} className={`film-media foreground ${profile?'is-active':''}`} aria-hidden="true"/>
@@ -57,7 +60,7 @@ export default function Home() {
     <Reveal order={6}><p className="motto">SWEAT OUT, GATHER IN</p></Reveal><Reveal order={7}><Team/></Reveal>
    </footer>
    <div className={`corners ${!intro&&!profile?'is-active':''}`} aria-hidden="true"><span className="corner left">{scene==='front'?'SWEAT OUT, GATHER IN':'GOOBNE OVEN SAUNA'}</span><span className="corner right">{scene==='front'?'SWEAT OUT, GATHER IN':'2026 DDP YOUNG DESIGNER'}</span></div>
-   <button className={`scroll-hint ${intro?'on-intro':''}`} onClick={()=>jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={scene==='front'?'처음으로 돌아가기':'다음 장면으로 스크롤'}><span>{!ready?'LOADING FILM':scene==='front'?'BACK TO START':'SCROLL TO EXPLORE'}</span><span className="hint-arrow">{scene==='front'?'↑':'↓'}</span></button>
+   <button className={`scroll-hint ${intro?'on-intro':''} ${(mode==='intro'||mode==='transition')&&ready?'is-hidden':''}`} disabled={!ready||mode==='intro'||mode==='transition'} onClick={()=>mode==='blocked'?player.current?.resume():jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={mode==='blocked'?'영상 재생':scene==='front'?'인트로부터 다시 재생':'다음 장면 재생'}><span>{!ready?'LOADING FILM':mode==='blocked'?'PLAY FILM':scene==='front'?'BACK TO START':'SCROLL FOR NEXT SCENE'}</span><span className="hint-arrow">{mode==='blocked'?'▶':scene==='front'?'↑':'↓'}</span></button>
    {failed&&<p className="media-error" role="status">영상을 불러오지 못해 원본 이미지로 표시합니다. <button onClick={()=>location.reload()}>다시 시도</button></p>}
    <div className="film-progress" aria-hidden="true"><span/></div>
   </div>

@@ -2,6 +2,7 @@ import type {FilmMode} from './scroll-film';
 import {filmResolution} from './film-resolution.ts';
 import {loadRegisteredStill,MAP_WIDTH,MAP_HEIGHT,type RegisteredStill} from './scene-registration.ts';
 import {SETTLE_DURATION,sceneAtTime} from './scroll-film.ts';
+import {REFERENCE_RED} from './film-color.ts';
 
 const VERTEX=`
 attribute vec2 position;
@@ -94,6 +95,13 @@ vec2 registeredUV(sampler2D flow,vec2 p,float amount){
 vec3 matchMovieColor(vec3 c){
   return texture2D(toneLut,vec2((c.r*255.0+.5)/256.0,.5)).rgb;
 }
+vec3 restoreSourceRed(vec3 c){
+  // Both sources share the user-approved #ED0505 palette. Preserve the dark
+  // red-channel texture and ease the bright backdrop into the exact target.
+  float t=clamp((c.r-.78)/.12,0.0,1.0);
+  float level=c.r<.78?c.r/.9:.78/.9+.12/.9*(t+t*t-t*t*t);
+  return vec3(${REFERENCE_RED.map(x=>(x/255).toFixed(9)).join(',')})*level;
+}
 vec3 finishColor(vec3 c){
   // Sub-LSB, stationary dithering breaks up 8-bit tonal steps. Apply after
   // grading and the page's dark gradient, without animated grain/flicker.
@@ -173,7 +181,7 @@ void main(){
     behind=mix(behind,smoothstep(.65,.89,original.r),stillMix);
     c=mix(c,original,stillMix);
   }
-  c.rgb=gradeSubject(c.rgb);
+  c.rgb=gradeSubject(restoreSourceRed(c.rgb));
   // A portrait viewport can continue below the source frame. Blend its last
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);

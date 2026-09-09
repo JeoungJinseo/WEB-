@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {mountScrollFilm,type Scene,type FilmMode} from '../lib/scroll-film';
 import {createFilmAtmosphere} from '../lib/film-atmosphere';
+import {RED_CHANNEL_MATRIX,SOURCE_RED_TABLES} from '../lib/film-color';
 
 function Reveal({children,order=0,className=''}:{children:ReactNode;order?:number;className?:string}) {
  return <span className={`reveal ${className}`} style={{'--order':order} as CSSProperties}><span>{children}</span></span>;
@@ -34,6 +35,7 @@ export default function Home() {
  };
  const intro=scene==='intro',profile=scene==='profile';
  return <main ref={root} className="film-page" data-scene={scene} aria-label="OVEN SAUNA 장면별 영상">
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style={{position:'absolute'}}><defs><filter id="source-red" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values={RED_CHANNEL_MATRIX}/><feComponentTransfer><feFuncR type="table" tableValues={SOURCE_RED_TABLES[0]}/><feFuncG type="table" tableValues={SOURCE_RED_TABLES[1]}/><feFuncB type="table" tableValues={SOURCE_RED_TABLES[2]}/></feComponentTransfer></filter></defs></svg>
   <div className="stage">
    <img className="film-poster" src="./assets/intro.jpg" alt=""/>
    <img className="scene-image still-fallback" src={`./assets/${intro?'back':scene}.png`} alt=""/>

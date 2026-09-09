@@ -38,6 +38,10 @@
 .film-page[data-atmosphere=true] .scene-shade{visibility:hidden}
 .film-page[data-atmosphere=false] .foreground{visibility:hidden}
 
+/* Match the native intro/fallback movie to the compositor's source-red grade.
+   Supplied PNG fallbacks already have the reference palette. */
+video.film-media,.film-poster{filter:url(#source-red)}
+
 
 
 /* Responsive anchors span the actual viewport. Typography scales separately

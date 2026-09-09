@@ -3,6 +3,7 @@
 export const LAST_FRAME = 343 / 24;
 export const INTRO_END = 104 / 24;
 export const SCENE_STOPS = [INTRO_END, 8.7, 14.2] as const;
+export const TRANSITION_DURATION = 2.5;
 export const clamp = (n:number, low=0, high=1) => Math.min(high,Math.max(low,n));
 export function sceneAtTime(t:number) {return t<3.9 ? 'intro' : t<6.8 ? 'back' : t<11.6 ? 'profile' : 'front';}
 export type Scene = ReturnType<typeof sceneAtTime>;
@@ -45,7 +46,8 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
       if(video.readyState>=2)paint(video.currentTime);
     }else{
       if(!reverseStart)reverseStart=now;
-      const time=Math.max(target,reverseFrom-(now-reverseStart)/1000);
+      const progress=clamp((now-reverseStart)/(TRANSITION_DURATION*1000));
+      const time=progress===1?target:reverseFrom+(target-reverseFrom)*progress;
       if(!video.seeking){
         if(time===target&&Math.abs(video.currentTime-target)<1/48){finish();return}
         if(Math.abs(video.currentTime-time)>1/48)video.currentTime=time;
@@ -56,6 +58,9 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function wake(){if(!raf&&!disposed&&active())raf=requestAnimationFrame(tick)}
   async function playForward(next:'intro'|'transition'){
     if(disposed||!ready||reduced)return;
+    // Every scene change has the same duration, regardless of clip length.
+    // Keep the opening logo sequence at its original speed, including replays.
+    video.playbackRate=next==='intro'?1:Math.max(.0625,(target-video.currentTime)/TRANSITION_DURATION);
     const request=++playRequest;blockedMode=next;direction=1;setMode(next);wake();
     try{await video.play()}
     catch{if(!disposed&&request===playRequest){setMode('blocked')}}
@@ -151,4 +156,3 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     reduce.removeEventListener('change',preference);
   }};
 }
-

@@ -29,6 +29,9 @@
 
 .film-page{touch-action:pan-x pinch-zoom;overscroll-behavior-y:none}
 
+/* Finish the rising UI within the 2.5-second scene change, including nav jumps. */
+.film-page[data-mode=transition] .is-active .reveal>span{transition-duration:.8s;transition-delay:calc(var(--order,0)*.04s)}
+
 /* Idle breathing and vapor are composited from the original held video frame. */
 .film-page[data-painted=true] .ambient-film{opacity:0}
 .film-page[data-atmosphere=true][data-painted=true] .ambient-film{opacity:1}

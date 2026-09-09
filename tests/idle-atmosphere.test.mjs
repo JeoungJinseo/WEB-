@@ -1,21 +1,27 @@
 import assert from 'node:assert/strict';
 import {createFilmAtmosphere} from '../lib/film-atmosphere.ts';
 let now=1000,id=0;const raf=new Map();
+const images=[];
+globalThis.Image=class{
+ constructor(){images.push(this)}
+ naturalWidth=0;naturalHeight=0;onload=null;onerror=null;
+ load(width,height){this.naturalWidth=width;this.naturalHeight=height;this.onload?.()}
+};
 Object.defineProperty(globalThis,'performance',{value:{now:()=>now},configurable:true});
 const doc=Object.assign(new EventTarget(),{hidden:false});
 Object.assign(globalThis,{document:doc,devicePixelRatio:2,matchMedia:()=>({matches:false}),requestAnimationFrame:fn=>{raf.set(++id,fn);return id},cancelAnimationFrame:id=>raf.delete(id)});
 function canvas(){
- const calls=[],uniforms={};let uploads=0;
+ const calls=[],uniforms={};let uploads=0,deletes=0;
  const gl={
   createShader:()=>({}),shaderSource(){},compileShader(){},getShaderParameter:()=>true,deleteShader(){},
   createProgram:()=>({}),attachShader(){},linkProgram(){},getProgramParameter:()=>true,useProgram(){},deleteProgram(){},
   createBuffer:()=>({}),bindBuffer(){},bufferData(){},deleteBuffer(){},getAttribLocation:()=>0,enableVertexAttribArray(){},vertexAttribPointer(){},
-  createTexture:()=>({}),bindTexture(){},texParameteri(){},deleteTexture(){},getUniformLocation:(_,name)=>name,
+  createTexture:()=>({}),bindTexture(){},texParameteri(){},deleteTexture(){deletes++},activeTexture(){},getUniformLocation:(_,name)=>name,
   MAX_VIEWPORT_DIMS:0x0d3a,MAX_RENDERBUFFER_SIZE:0x84e8,
   getParameter:key=>key===0x0d3a?new Int32Array([16384,16384]):16384,
-  uniform1f:(name,value)=>{uniforms[name]=value},uniform2f:(name,x,y)=>{uniforms[name]=[x,y]},uniform4f(){},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
+  uniform1i:(name,value)=>{uniforms[name]=value},uniform1f:(name,value)=>{uniforms[name]=value},uniform2f:(name,x,y)=>{uniforms[name]=[x,y]},uniform4f(){},isContextLost:()=>false,viewport(){},texImage2D(){uploads++},drawArrays(){calls.push({...uniforms})},
  };
- return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0}),calls,uploads:()=>uploads});
+ return Object.assign(new EventTarget(),{width:300,height:150,getContext:()=>gl,getBoundingClientRect:()=>({width:1920,height:1080,left:0,top:0}),calls,uploads:()=>uploads,deletes:()=>deletes});
 }
 function run(ms){for(let elapsed=0;elapsed<ms;elapsed+=20){now+=20;const pending=[...raf.values()];raf.clear();pending.forEach(fn=>fn(now))}}
 const shade={};let shadeOpacity='0.65';
@@ -28,6 +34,14 @@ assert.equal(video.paused,true);assert.equal(video.currentTime,4.333333,'idle ef
 assert.ok(base.calls.length>200,'held frame keeps redrawing without scroll or video callbacks');
 assert.equal(base.uploads(),1,'held 4K frame is uploaded only once');
 assert.deepEqual(base.calls.at(-1).filmSize,[3840,2160],'reconstruction uses native source texels');
+assert.equal(base.calls.at(-1).stillMix,0,'a slow image download must leave the film visible');
+assert.equal(images.length,3);
+images[0].load(1673,1190);run(400);
+assert.equal(base.calls.at(-1).stillMix,1,'idle scene reaches the original PNG without scroll');
+assert.deepEqual(base.calls.at(-1).stillSize,[1673,1190],'original native texels are used, not an upscaled movie');
+assert.equal(root.dataset.detailSource,'original-back');
+const uploadsAfterStill=base.uploads();run(1000);
+assert.equal(base.uploads(),uploadsAfterStill,'idle textures are not uploaded repeatedly');
 assert.equal(base.calls.at(-1).shadeOpacity,.65,'CSS shade timing is preserved in the floating-point compositor');
 base.getBoundingClientRect=()=>({width:2880,height:1800,left:0,top:0});run(80);
 assert.equal(base.width,5760,'large Retina displays must not stretch a 3840px canvas');
@@ -38,9 +52,18 @@ globalThis.devicePixelRatio=2;
 assert.ok(Math.max(...base.calls.map(c=>c.breath))>.98);
 assert.ok(new Set(base.calls.map(c=>c.breath.toFixed(3))).size>100,'breathing continues through multiple cycles');
 assert.ok(base.calls.at(-1).clock-base.calls[0].clock>10,'steam keeps rising while the video is paused');
-ambient.setMode('transition');ambient.frame(5);run(2000);
+ambient.setMode('transition');ambient.frame(5);run(80);
+assert.ok(base.calls.at(-1).stillMix>0&&base.calls.at(-1).stillMix<1,'the still fades out rather than popping into playback');
+run(1920);
+assert.equal(base.calls.at(-1).stillMix,0,'playback uses the native movie');
 assert.ok(base.calls.at(-1).steam<.002,'idle treatment fades out during the next scene');assert.equal(raf.size,0);
-video.currentTime=8.7;ambient.setMode('idle');ambient.frame(8.7);run(1000);
+video.currentTime=8.7;ambient.setMode('idle');ambient.frame(8.7);run(500);
+images[1].onerror();run(80);
+assert.equal(base.calls.at(-1).stillMix,0,'failed or pending profile must never reuse the back original');
+images[1].load(1674,1190);run(1000);
+assert.equal(root.dataset.detailSource,'original-profile');
+assert.deepEqual(base.calls.at(-1).stillSize,[1674,1190]);
+assert.equal(subject.calls.at(-1).stillMix,1,'foreground matte upgrades with the same original');
 assert.ok(subject.calls.length>10);assert.equal(base.calls.at(-1).breath,subject.calls.at(-1).breath,'foreground and background remain aligned');
 assert.equal(subject.calls.at(-1).shadeOpacity,0,'the foreground must never receive the background gradient');
 shadeOpacity='0';run(80);assert.equal(base.calls.at(-1).shadeOpacity,0,'intro shade animation reaches a transparent endpoint');
@@ -48,5 +71,15 @@ doc.hidden=true;doc.dispatchEvent(new Event('visibilitychange'));assert.equal(ra
 const count=base.calls.length;run(1000);assert.equal(base.calls.length,count);
 doc.hidden=false;doc.dispatchEvent(new Event('visibilitychange'));run(1000);assert.ok(base.calls.length>count);
 ambient.setMode('intro');ambient.frame(0);assert.equal(root.dataset.atmosphere,'false','replaying the intro hides the held-frame overlay');
-ambient.dispose();assert.equal(raf.size,0);
-console.log('PASS: live idle breathing and steam on a paused frame, cached 4K texture, aligned foreground, transition fade, hidden-tab pause, intro reset, cleanup');
+ambient.setMode('transition');ambient.frame(12);run(400);
+video.currentTime=14.2;ambient.setMode('idle');ambient.frame(14.2);
+images[2].load(1906,1356);run(1000);assert.equal(root.dataset.detailSource,'original-front');
+assert.deepEqual(base.calls.at(-1).stillSize,[1906,1356]);
+ambient.setMode('transition');run(400);video.currentTime=4.333333;
+ambient.setMode('idle');ambient.frame(video.currentTime);
+const beforeReturn=base.uploads();run(1000);
+assert.equal(base.uploads(),beforeReturn,'returning to a decoded scene reuses its GPU texture');
+assert.equal(root.dataset.detailSource,'original-back');
+ambient.dispose();assert.equal(raf.size,0);assert.equal(base.deletes(),4,'all three cached still textures and video texture are released');
+assert.ok(images.every(image=>image.onload===null&&image.onerror===null),'late loads cannot wake a disposed compositor');
+console.log('PASS: original PNG idle detail, late/failed loads, cached textures, aligned masks, smooth video handoff, breathing, Retina buffers, hidden-tab pause, cleanup');

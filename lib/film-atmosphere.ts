@@ -12,6 +12,9 @@ const FRAGMENT=`
 precision highp float;
 varying vec2 uv;
 uniform sampler2D film;
+uniform sampler2D stillFilm;
+uniform vec2 stillSize;
+uniform float stillMix;
 uniform float breath;
 uniform float steam;
 uniform float clock;
@@ -22,8 +25,8 @@ uniform float shadeOpacity;
 // Catmull-Rom reconstruction retains fine towel/fabric detail through the
 // breathing warp and Retina enlargement. Nine bilinear taps replace sixteen
 // separate texel reads; this does not manufacture new source detail.
-vec4 sampleFilm(vec2 p){
-  vec2 pixel=p*filmSize;
+vec4 sampleTexture(sampler2D source,vec2 size,vec2 p){
+  vec2 pixel=p*size;
   vec2 center=floor(pixel-.5)+.5;
   vec2 f=pixel-center;
   vec2 w0=f*(-.5+f*(1.0-.5*f));
@@ -31,18 +34,18 @@ vec4 sampleFilm(vec2 p){
   vec2 w2=f*(.5+f*(2.0-1.5*f));
   vec2 w3=f*f*(-.5+.5*f);
   vec2 w12=w1+w2;
-  vec2 p0=(center-1.0)/filmSize;
-  vec2 p12=(center+w2/w12)/filmSize;
-  vec2 p3=(center+2.0)/filmSize;
-  vec4 c=texture2D(film,p0)*w0.x*w0.y;
-  c+=texture2D(film,vec2(p12.x,p0.y))*w12.x*w0.y;
-  c+=texture2D(film,vec2(p3.x,p0.y))*w3.x*w0.y;
-  c+=texture2D(film,vec2(p0.x,p12.y))*w0.x*w12.y;
-  c+=texture2D(film,p12)*w12.x*w12.y;
-  c+=texture2D(film,vec2(p3.x,p12.y))*w3.x*w12.y;
-  c+=texture2D(film,vec2(p0.x,p3.y))*w0.x*w3.y;
-  c+=texture2D(film,vec2(p12.x,p3.y))*w12.x*w3.y;
-  c+=texture2D(film,p3)*w3.x*w3.y;
+  vec2 p0=(center-1.0)/size;
+  vec2 p12=(center+w2/w12)/size;
+  vec2 p3=(center+2.0)/size;
+  vec4 c=texture2D(source,p0)*w0.x*w0.y;
+  c+=texture2D(source,vec2(p12.x,p0.y))*w12.x*w0.y;
+  c+=texture2D(source,vec2(p3.x,p0.y))*w3.x*w0.y;
+  c+=texture2D(source,vec2(p0.x,p12.y))*w0.x*w12.y;
+  c+=texture2D(source,p12)*w12.x*w12.y;
+  c+=texture2D(source,vec2(p3.x,p12.y))*w3.x*w12.y;
+  c+=texture2D(source,vec2(p0.x,p3.y))*w0.x*w3.y;
+  c+=texture2D(source,vec2(p12.x,p3.y))*w12.x*w3.y;
+  c+=texture2D(source,p3)*w3.x*w3.y;
   return clamp(c,0.0,1.0);
 }
 vec3 refineSubject(vec2 p,vec3 c){
@@ -106,12 +109,33 @@ void main(){
   if(outside){
     sampleUV=clamp(sceneUV,vec2(.116,0.0),vec2(.884,1.0));
   }
-  vec4 c=sampleFilm(sampleUV);
-  // Extract the foreground matte before changing tones: brighter fabric
-  // must not become transparent or expose the logo through the subject.
-  float subject=1.0-smoothstep(.10,.69,c.r);
-  float behind=smoothstep(.65,.89,c.r);
-  if(!outside)c.rgb=refineSubject(sampleUV,c.rgb);
+  vec4 c=vec4(0.0);float subject=0.0,behind=0.0;
+  // A fully settled scene never samples the compressed movie. Original PNG
+  // texels retain their own color and detail, without the movie's shadow grade.
+  if(stillMix<.999){
+    c=sampleTexture(film,filmSize,sampleUV);
+    subject=1.0-smoothstep(.10,.69,c.r);
+    behind=smoothstep(.65,.89,c.r);
+    if(!outside)c.rgb=refineSubject(sampleUV,c.rgb);
+  }
+  if(stillMix>.001){
+    vec2 stillUV=vec2((sampleUV.x-0.10468749999999999)/0.790625,sampleUV.y);
+    vec4 original=sampleTexture(stillFilm,stillSize,stillUV);
+    // Wider viewports need a continuation of the red backdrop. Do not
+    // stretch the PNG's grainy border into visible horizontal scan lines.
+    float edgeDistance=min(min(sceneUV.x-.116,.884-sceneUV.x),min(sceneUV.y,1.0-sceneUV.y));
+    if(edgeDistance<.025){
+      vec3 backdrop=(texture2D(stillFilm,vec2(.12,.12)).rgb
+        +texture2D(stillFilm,vec2(.88,.12)).rgb
+        +texture2D(stillFilm,vec2(.12,.18)).rgb
+        +texture2D(stillFilm,vec2(.88,.18)).rgb)*.25;
+      float feather=(1.0-smoothstep(0.0,.025,edgeDistance))*smoothstep(.65,.89,original.r);
+      original.rgb=mix(original.rgb,backdrop,outside?1.0:feather);
+    }
+    subject=mix(subject,1.0-smoothstep(.10,.69,original.r),stillMix);
+    behind=mix(behind,smoothstep(.65,.89,original.r),stillMix);
+    c=mix(c,original,stillMix);
+  }
   // A portrait viewport can continue below the source frame. Blend its last
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
@@ -136,7 +160,8 @@ void main(){
   gl_FragColor=vec4(finishColor(color),1.0);
 }`;
 
-type Layer={draw:(breath:number,steam:number,time:number,shade:number)=>void;dispose:()=>void};
+type Still={image:HTMLImageElement;mix:number};
+type Layer={draw:(breath:number,steam:number,time:number,shade:number,still:Still|null)=>void;dispose:()=>void};
 function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:boolean):Layer|null {
   const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
   if(!gl)return null;
@@ -148,7 +173,8 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
   }
   let vertex:WebGLShader|null=null,fragment:WebGLShader|null=null,program:WebGLProgram|null=null;
   let buffer:WebGLBuffer|null=null,texture:WebGLTexture|null=null;
-  const dispose=()=>{gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment)};
+  const stillTextures=new Map<HTMLImageElement,WebGLTexture>();
+  const dispose=()=>{stillTextures.forEach(t=>gl.deleteTexture(t));stillTextures.clear();gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment)};
   try{
     vertex=compile(gl.VERTEX_SHADER,VERTEX);fragment=compile(gl.FRAGMENT_SHADER,FRAGMENT);
     program=gl.createProgram();if(!program)throw new Error('program unavailable');
@@ -161,21 +187,42 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     const breathLocation=gl.getUniformLocation(program,'breath'),steamLocation=gl.getUniformLocation(program,'steam'),clockLocation=gl.getUniformLocation(program,'clock'),rectLocation=gl.getUniformLocation(program,'filmRect'),sizeLocation=gl.getUniformLocation(program,'filmSize'),shadeLocation=gl.getUniformLocation(program,'shadeOpacity');
+    const stillSizeLocation=gl.getUniformLocation(program,'stillSize'),stillMixLocation=gl.getUniformLocation(program,'stillMix');
+    gl.uniform1i(gl.getUniformLocation(program,'film'),0);
+    gl.uniform1i(gl.getUniformLocation(program,'stillFilm'),1);
     const viewportLimit=gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
     const bufferLimit=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
     const maxWidth=Math.min(viewportLimit[0],bufferLimit),maxHeight=Math.min(viewportLimit[1],bufferLimit);
     gl.uniform1f(gl.getUniformLocation(program,'foregroundOnly'),foreground?1:0);
     let uploadedTime=-1,textureReady=false;
-    return {dispose,draw:(breath,steam,time,shade)=>{
+    return {dispose,draw:(breath,steam,time,shade,still)=>{
       if(video.readyState<2||video.seeking||gl.isContextLost())return;
       // The texture remains native 4K. The display buffer must also cover
       // physical screen pixels, including DPR 3 phones and 5K/6K desktops.
       const rect=canvas.getBoundingClientRect();
       const {width,height}=filmResolution(rect.width,rect.height,devicePixelRatio,maxWidth,maxHeight);
       if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;gl.viewport(0,0,width,height)}
-      if(!textureReady||uploadedTime!==video.currentTime){
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
+      if(!textureReady||(uploadedTime!==video.currentTime&&(!still||still.mix<1))){
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);uploadedTime=video.currentTime;textureReady=true;
       }
+      gl.activeTexture(gl.TEXTURE1);
+      if(still){
+        let cached=stillTextures.get(still.image);
+        if(!cached){
+          cached=gl.createTexture()||undefined;if(!cached)throw new Error('still texture unavailable');
+          gl.bindTexture(gl.TEXTURE_2D,cached);
+          gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+          gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,still.image);
+          stillTextures.set(still.image,cached);
+        }else gl.bindTexture(gl.TEXTURE_2D,cached);
+        gl.uniform2f(stillSizeLocation,still.image.naturalWidth,still.image.naturalHeight);
+      }else{
+        // Keep both samplers complete, even before any still has decoded.
+        gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform2f(stillSizeLocation,video.videoWidth,video.videoHeight);
+      }
+      gl.uniform1f(stillMixLocation,still?.mix||0);
       const filmBounds=video.getBoundingClientRect();
       gl.uniform2f(sizeLocation,video.videoWidth,video.videoHeight);
       gl.uniform4f(rectLocation,(filmBounds.left-rect.left)/rect.width,(filmBounds.top-rect.top)/rect.height,filmBounds.width/rect.width,filmBounds.height/rect.height);
@@ -195,22 +242,44 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
   const subject=base?createLayer(foreground,video,true):null;
   let mode:FilmMode='intro',mediaTime=0,idleTime=0,last=0,raf=0,lastDraw=0,strength=0,disposed=false;
   let available=!!base&&!!subject;
+  const originals=new Map<string,HTMLImageElement>();
+  const pending:HTMLImageElement[]=[];
+  let heldScene='',heldImage:HTMLImageElement|null=null,stillBlend=0;
+  const sceneKey=()=>mediaTime<6.8?'back':mediaTime<11.6?'profile':'front';
+  function selectOriginal(){
+    if(mode!=='idle')return;
+    const scene=sceneKey();
+    if(scene!==heldScene){heldScene=scene;heldImage=null;stillBlend=0}
+    heldImage=originals.get(scene)||null;
+  }
+  // Decode source PNGs independently of video loading. Failures simply keep
+  // the existing 4K movie frame; a late decode upgrades the current idle scene.
+  if(available)for(const scene of ['back','profile','front']){
+    const image=new Image();pending.push(image);image.decoding='async';
+    image.onload=()=>{if(!disposed&&image.naturalWidth>0){originals.set(scene,image);selectOriginal();wake()}};
+    image.onerror=()=>{};image.src=`./assets/${scene}.png`;
+  }
   const enabled=()=>available&&root.dataset.fallback!=='true'&&root.dataset.reduced!=='true';
   function render(now:number){
     if(!enabled()||mediaTime<3.9||video.readyState<2||video.seeking)return;
     const breath=(1-Math.cos(idleTime*Math.PI*2/4.2))*.5*strength;
     try{
       const shadeAlpha=shade?Number.parseFloat(getComputedStyle(shade).opacity)||0:0;
-      base!.draw(breath,strength,now/1000,shadeAlpha);
-      if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000,0);
+      const eased=stillBlend*stillBlend*(3-2*stillBlend);
+      const still=heldImage&&eased>0?{image:heldImage,mix:eased}:null;
+      base!.draw(breath,strength,now/1000,shadeAlpha,still);
+      if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000,0,still);
       root.dataset.atmosphere='true';
+      root.dataset.detailSource=stillBlend===1&&heldImage?`original-${heldScene}`:'video';
     }catch{available=false;root.dataset.atmosphere='false'}
   }
-  function wake(){if(!raf&&!disposed&&enabled()&&!document.hidden&&(mode==='idle'||strength>.001))raf=requestAnimationFrame(tick)}
+  function wake(){if(!raf&&!disposed&&enabled()&&!document.hidden&&(mode==='idle'||strength>.001||stillBlend>0))raf=requestAnimationFrame(tick)}
   function tick(now:number){
     raf=0;if(disposed||document.hidden||!enabled())return;
     const dt=last?Math.min((now-last)/1000,.1):0;last=now;
     if(mode==='idle')idleTime+=dt;
+    selectOriginal();
+    stillBlend=mode==='idle'&&heldImage?Math.min(1,stillBlend+dt/.32):Math.max(0,stillBlend-dt/.18);
     const target=mode==='idle'?1:0;
     strength+=(target-strength)*(1-Math.exp(-dt/(target?1.0:.20)));
     if(strength<.001&&target===0)strength=0;
@@ -225,10 +294,10 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
     setMode(next:FilmMode){
       if(next==='idle'&&mode!=='idle'){idleTime=0;strength=0;last=0}
       mode=next;
-      if(next==='intro'){strength=0;root.dataset.atmosphere='false'}
+      if(next==='intro'){strength=0;stillBlend=0;heldScene='';heldImage=null;root.dataset.atmosphere='false';root.dataset.detailSource='video'}
       wake();
     },
-    frame(time:number){mediaTime=time;if(time<3.9){root.dataset.atmosphere='false';return}const now=performance.now();if(mode==='idle'||now-lastDraw>=1000/30){lastDraw=now;render(now)}},
-    dispose(){disposed=true;cancelAnimationFrame(raf);base?.dispose();subject?.dispose();root.dataset.atmosphere='false';document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);foreground.removeEventListener('webglcontextlost',lost)},
+    frame(time:number){mediaTime=time;selectOriginal();if(time<3.9){root.dataset.atmosphere='false';return}const now=performance.now();if(mode==='idle'||now-lastDraw>=1000/30){lastDraw=now;render(now)}},
+    dispose(){disposed=true;pending.forEach(image=>{image.onload=null;image.onerror=null});originals.clear();heldImage=null;cancelAnimationFrame(raf);base?.dispose();subject?.dispose();root.dataset.atmosphere='false';document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);foreground.removeEventListener('webglcontextlost',lost)},
   };
 }

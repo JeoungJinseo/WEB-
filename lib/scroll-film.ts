@@ -152,17 +152,3 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   }};
 }
 
-/** Composite the original moving silhouette over the profile wordmark.
- * The red backdrop becomes transparent; the original foreground pixels stay intact. */
-export function createForeground(canvas:HTMLCanvasElement, video:HTMLVideoElement) {
-  const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
-  if(!gl)return ()=>{};
-  function shader(type:number,source:string){const s=gl!.createShader(type)!;gl!.shaderSource(s,source);gl!.compileShader(s);return s}
-  const vertex=shader(gl.VERTEX_SHADER,'attribute vec2 a; varying vec2 uv; void main(){uv=vec2((a.x+1.0)/2.0,1.0-(a.y+1.0)/2.0);gl_Position=vec4(a,0.0,1.0);}');
-  const fragment=shader(gl.FRAGMENT_SHADER,'precision mediump float; varying vec2 uv; uniform sampler2D film; void main(){vec4 c=texture2D(film,uv); float alpha=1.0-smoothstep(0.10,0.69,c.r); gl_FragColor=vec4(c.rgb,alpha);}');
-  const program=gl.createProgram()!;gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.useProgram(program);
-  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
-  const loc=gl.getAttribLocation(program,'a');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  return (dispose=false)=>{if(dispose){gl.deleteTexture(texture);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);return}if(video.readyState<2)return;try{if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight;gl.viewport(0,0,canvas.width,canvas.height)}gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,video);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}catch{canvas.style.visibility='hidden'}};
-}

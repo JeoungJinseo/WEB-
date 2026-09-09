@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
-import {mountScrollFilm,createForeground,type Scene,type FilmMode} from '../lib/scroll-film';
+import {mountScrollFilm,type Scene,type FilmMode} from '../lib/scroll-film';
+import {createFilmAtmosphere} from '../lib/film-atmosphere';
 
 function Reveal({children,order=0,className=''}:{children:ReactNode;order?:number;className?:string}) {
  return <span className={`reveal ${className}`} style={{'--order':order} as CSSProperties}><span>{children}</span></span>;
@@ -13,16 +14,16 @@ function Collab({red=false}:{red?:boolean}) {
 }
 function Team(){return <div className="team"><span><small>Team Leader / Art Director</small> Kim Gwanwu</span><span><small>BRANDING / UX MANAGER</small> JEOUMG JINSEO</span><span><small>INTERACTION / GRAPHIC DESIGNER</small> JEONG JUNYONG</span></div>}
 export default function Home() {
- const root=useRef<HTMLElement>(null),video=useRef<HTMLVideoElement>(null),foreground=useRef<HTMLCanvasElement>(null);
+ const root=useRef<HTMLElement>(null),video=useRef<HTMLVideoElement>(null),foreground=useRef<HTMLCanvasElement>(null),atmosphere=useRef<HTMLCanvasElement>(null);
  const player=useRef<ReturnType<typeof mountScrollFilm>|null>(null);
  const [scene,setScene]=useState<Scene>('intro'),[ready,setReady]=useState(false),[failed,setFailed]=useState(false);
  const [mode,setMode]=useState<FilmMode>('intro');
  useEffect(()=>{
-  if(!root.current||!video.current||!foreground.current)return;
-  const draw=createForeground(foreground.current,video.current);
-  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:setMode,onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:t=>{if(t>=6.6&&t<=11.9)draw()}});
+  if(!root.current||!video.current||!foreground.current||!atmosphere.current)return;
+  const ambient=createFilmAtmosphere(root.current,atmosphere.current,foreground.current,video.current);
+  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:mode=>{setMode(mode);ambient.setMode(mode)},onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:ambient.frame});
   player.current=film;
-  return ()=>{player.current=null;film.dispose();draw(true)};
+  return ()=>{player.current=null;film.dispose();ambient.dispose()};
  },[]);
  const jump=(time:number)=>{
   if(time===0){player.current?.replayIntro();return}
@@ -34,6 +35,7 @@ export default function Home() {
    <img className="film-poster" src="/assets/intro.jpg" alt=""/>
    <img className="scene-image still-fallback" src={`/assets/${intro?'back':scene}.png`} alt=""/>
    <video ref={video} className="film-media" muted playsInline preload="none" aria-label="OVEN SAUNA — 인트로 자동 재생 후 한 번 스크롤할 때 다음 장면까지 재생되는 영상"/>
+   <canvas ref={atmosphere} className="film-media ambient-film" aria-hidden="true"/>
    <div className="scene-shade"/>
    <div className={`profile-wordmark ${profile?'is-active':''}`} aria-hidden="true"><Reveal order={3}><img src="/assets/wordmark-wide.svg" alt=""/></Reveal></div>
    <canvas ref={foreground} className={`film-media foreground ${profile?'is-active':''}`} aria-hidden="true"/>

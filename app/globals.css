@@ -28,3 +28,8 @@
 .scroll-hint{transition:opacity .35s var(--ease)}.scroll-hint.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 
 .film-page{touch-action:pan-x pinch-zoom;overscroll-behavior-y:none}
+
+/* Idle breathing and vapor are composited from the original held video frame. */
+.film-page[data-painted=true] .ambient-film{opacity:0}
+.film-page[data-atmosphere=true][data-painted=true] .ambient-film{opacity:1}
+.film-page[data-atmosphere=false] .foreground{visibility:hidden}

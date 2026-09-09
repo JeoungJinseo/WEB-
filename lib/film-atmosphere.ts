@@ -39,6 +39,9 @@ void main(){
     sampleUV=clamp(sceneUV,vec2(.116,0.0),vec2(.884,1.0));
   }
   vec4 c=texture2D(film,sampleUV);
+  // A portrait viewport can continue below the source frame. Blend its last
+  // few rows into the dark footer instead of stretching jacket pixels down.
+  if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
   float subject=1.0-smoothstep(.10,.69,c.r);
   if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
   // Upward advection, irregular wisps and soft columns behind both shoulders.

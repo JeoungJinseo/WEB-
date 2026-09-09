@@ -2,16 +2,27 @@ export const DESIGN_WIDTH=1440;
 export const DESIGN_HEIGHT=1024;
 export const CONTENT_FRACTION=3036/3840;
 
-/** Fit the complete Figma composition; extend only the background outside it. */
+/** UI follows the viewport. Size the film separately so the portrait keeps
+ * its proportions while wider screens use the available width. */
 export function filmLayout(width:number,height:number,time:number){
- const compositionScale=Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT);
- const compositionHeight=DESIGN_HEIGHT*compositionScale;
- const compositionWidth=DESIGN_WIDTH*compositionScale;
- const compositionTop=(height-compositionHeight)/2;
+ const portrait=width<height;
+ const compositionScale=portrait?Math.max(.62,Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT)):Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT);
+ const compositionHeight=height;
+ const compositionWidth=width;
+ const compositionTop=0;
+ const uiWidth=width/compositionScale,uiHeight=height/compositionScale;
+ const artworkWidth=portrait?Math.max(width,Math.min(width*2.1,height*1.1)):Math.min(width,height*1.95);
+ const artworkHeight=artworkWidth/CONTENT_FRACTION*9/16;
+ // Keep the head near the top. Only the lower background/body may extend
+ // beyond a wide viewport; the UI and credits never share that crop.
+ const baseTop=portrait?height*.06:Math.min(0,(height-artworkHeight)*.055);
+ const front=Math.min(1,Math.max(0,(time-10.8)/3));
+ const frontEase=front*front*(3-2*front);
+ const artworkTop=!portrait&&width/height>1.5?baseTop+(height*.02-baseTop)*frontEase:baseTop;
  const introWidth=Math.min(width,height*16/9);
  const blend=Math.min(1,Math.max(0,(time-3.2)/.7));
  const eased=blend*blend*(3-2*blend);
- const filmWidth=introWidth+(compositionWidth/CONTENT_FRACTION-introWidth)*eased;
- const filmTop=(height-introWidth*9/16)/2*(1-eased)+compositionTop*eased;
- return {compositionScale,compositionWidth,compositionHeight,compositionTop,filmWidth,filmTop};
+ const filmWidth=introWidth+(artworkWidth/CONTENT_FRACTION-introWidth)*eased;
+ const filmTop=(height-introWidth*9/16)/2*(1-eased)+artworkTop*eased;
+ return {compositionScale,compositionWidth,compositionHeight,compositionTop,uiWidth,uiHeight,artworkWidth,artworkHeight,filmWidth,filmTop};
 }

@@ -23,11 +23,11 @@ float noise(vec2 p){
 float mist(vec2 p){return noise(p)*.57+noise(p*2.03+7.2)*.28+noise(p*4.07+19.1)*.15;}
 void main(){
   // The head stays at its original coordinates. Only the torso expands by
-  // less than half a percent, with zero displacement at the bottom anchor.
+  // less than one percent, with zero displacement at the bottom anchor.
   float torso=smoothstep(.48,.64,uv.y)*(1.0-smoothstep(.88,1.0,uv.y));
   vec2 sampleUV=uv;
-  sampleUV.x=.5+(uv.x-.5)/(1.0+breath*.0045*torso);
-  sampleUV.y+=breath*.0025*torso;
+  sampleUV.x=.5+(uv.x-.5)/(1.0+breath*.009*torso);
+  sampleUV.y+=breath*.006*torso;
   vec4 c=texture2D(film,sampleUV);
   float subject=1.0-smoothstep(.10,.69,c.r);
   if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,subject);return;}
@@ -36,14 +36,14 @@ void main(){
   float columns=exp(-pow((uv.x-.27-sway)/.095,2.0))
     +exp(-pow((uv.x-.73+sway)/.10,2.0))
     +.35*exp(-pow((uv.x-.50-sway)/.13,2.0));
-  vec2 flow=uv*vec2(12.0,7.0)+vec2(clock*.012,clock*.075);
+  vec2 flow=uv*vec2(12.0,7.0)+vec2(clock*.014,clock*.115);
   flow.x+=noise(flow*.7)*.55;
   float vapor=smoothstep(.33,.78,mist(flow));
   float edges=smoothstep(.10,.115,uv.x)*(1.0-smoothstep(.885,.90,uv.x));
   float height=smoothstep(.03,.24,uv.y)*(1.0-smoothstep(.90,1.0,uv.y));
   // Red-background key keeps the vapor off the original dark silhouette.
   float behind=smoothstep(.72,.93,c.r);
-  float alpha=min(columns,1.2)*vapor*height*edges*behind*steam*.14;
+  float alpha=min(columns,1.2)*vapor*height*edges*behind*steam*.22;
   gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.82,.78),alpha),1.0);
 }`;
 
@@ -102,7 +102,7 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
   const enabled=()=>available&&root.dataset.fallback!=='true'&&root.dataset.reduced!=='true';
   function render(now:number){
     if(!enabled()||mediaTime<3.9||video.readyState<2||video.seeking)return;
-    const breath=(1-Math.cos(idleTime*Math.PI*2/5.6))*.5*strength;
+    const breath=(1-Math.cos(idleTime*Math.PI*2/4.8))*.5*strength;
     try{
       base!.draw(breath,strength,now/1000);
       if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000);

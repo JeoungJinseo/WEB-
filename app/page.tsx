@@ -24,7 +24,7 @@ export default function Home() {
  useEffect(()=>{
   if(!root.current||!video.current||!foreground.current||!atmosphere.current)return;
   const ambient=createFilmAtmosphere(root.current,atmosphere.current,foreground.current,video.current);
-  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:mode=>{setMode(mode);ambient.setMode(mode)},onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:ambient.frame});
+  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:mode=>{setMode(mode);ambient.setMode(mode)},onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:ambient.frame,onHandoff:ambient.handoff});
   player.current=film;
   return ()=>{player.current=null;film.dispose();ambient.dispose()};
  },[]);
@@ -67,7 +67,7 @@ export default function Home() {
    </footer>
    </div>
    <div className="composition corner-frame"><div className={`corners ${!intro&&!profile?'is-active':''}`} aria-hidden="true"><span className="corner left">{scene==='front'?'SWEAT OUT, GATHER IN':'GOOBNE OVEN SAUNA'}</span><span className="corner right">{scene==='front'?'SWEAT OUT, GATHER IN':'2026 DDP YOUNG DESIGNER'}</span></div></div>
-   <button className={`scroll-hint ${intro?'on-intro':''} ${(mode==='intro'||mode==='transition')&&ready?'is-hidden':''}`} disabled={!ready||mode==='intro'||mode==='transition'} onClick={()=>mode==='blocked'?player.current?.resume():jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={mode==='blocked'?'영상 재생':scene==='front'?'인트로부터 다시 재생':'다음 장면 재생'}><span>{!ready?'LOADING FILM':mode==='blocked'?'PLAY FILM':scene==='front'?'BACK TO START':'SCROLL FOR NEXT SCENE'}</span><span className="hint-arrow">{mode==='blocked'?'▶':scene==='front'?'↑':'↓'}</span></button>
+   <button className={`scroll-hint ${intro?'on-intro':''} ${(mode==='intro'||mode==='transition'||mode==='settling')&&ready?'is-hidden':''}`} disabled={!ready||mode==='intro'||mode==='transition'||mode==='settling'} onClick={()=>mode==='blocked'?player.current?.resume():jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={mode==='blocked'?'영상 재생':scene==='front'?'인트로부터 다시 재생':'다음 장면 재생'}><span>{!ready?'LOADING FILM':mode==='blocked'?'PLAY FILM':scene==='front'?'BACK TO START':'SCROLL FOR NEXT SCENE'}</span><span className="hint-arrow">{mode==='blocked'?'▶':scene==='front'?'↑':'↓'}</span></button>
    {failed&&<p className="media-error" role="status">영상을 불러오지 못해 원본 이미지로 표시합니다. <button onClick={()=>location.reload()}>다시 시도</button></p>}
    <div className="film-progress" aria-hidden="true"><span/></div>
   </div>

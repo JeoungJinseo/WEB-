@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {parseRegistration,loadRegisteredStill,MAP_BYTES} from '../lib/scene-registration.ts';
+import {SCENE_STOPS} from '../lib/scroll-film.ts';
+const manifest=JSON.parse(readFileSync(new URL('../public/assets/registration/manifest.json',import.meta.url)));
+for(const [index,scene] of ['back','profile','front'].entries()){
+ const bytes=readFileSync(new URL(`../public/assets/registration/${scene}.bin`,import.meta.url));
+ const data=parseRegistration(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+ const metadata=manifest[scene];
+ assert.equal(metadata.time,SCENE_STOPS[index],'registration must use the exact decoder stop frame');
+ const original=readFileSync(new URL(`../public/assets/${scene}.png`,import.meta.url));
+ assert.equal(createHash('sha256').update(original).digest('hex'),metadata.source_sha256,'stale registration cannot ship with another image');
+ const background=metadata.original_background_rgb[0];
+ const calibrated=[...data.tone.slice(background*4,background*4+3)];
+ calibrated.forEach((value,channel)=>assert.ok(Math.abs(value-metadata.movie_background_rgb[channel])<=4,'background color matches the BT.709 decoder within 4/255'));
+ for(let i=1;i<256;i++)assert.ok(data.tone[i*4]>=data.tone[(i-1)*4],'shadow tone curve must not invert contrast');
+ assert.ok(metadata.mean_subject_difference_after<metadata.mean_subject_difference_before,'registration must reduce endpoint mismatch');
+}
+assert.throws(()=>parseRegistration(new ArrayBuffer(MAP_BYTES)),/Invalid/);
+const images=[];
+globalThis.Image=class{constructor(){images.push(this)}decode(){return Promise.resolve()}};
+globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(MAP_BYTES*2+1024)});
+const abort=new AbortController();const pending=loadRegisteredStill('profile',abort.signal);abort.abort();
+await assert.rejects(pending,/aborted/);assert.equal(images[0].onload,null,'aborted requests remove callbacks');
+const failed=loadRegisteredStill('back',new AbortController().signal);images[1].onerror();
+await assert.rejects(failed,/image unavailable/);
+globalThis.fetch=async()=>({ok:false});
+await assert.rejects(loadRegisteredStill('front',new AbortController().signal),/registration unavailable/);
+images[2].onload();
+console.log('PASS: exact stop registration, original hashes, BT.709 color calibration, monotonic shadows, malformed data and failed/aborted loads');

@@ -3,16 +3,21 @@ import {filmLayout} from './film-layout.ts';
  * scene; the original decoder and media remain continuous across the handoff. */
 export const LAST_FRAME = 343 / 24;
 export const INTRO_END = 104 / 24;
-export const SCENE_STOPS = [INTRO_END, 8.7, 14.2] as const;
+export const SCENE_STOPS = [INTRO_END, 208 / 24, 340 / 24] as const;
 export const TRANSITION_DURATION = 2.5;
+export const SETTLE_DURATION = .48;
+export const HANDOFF_LEAD=.12;
+const PLAYBACK_DURATION=TRANSITION_DURATION-SETTLE_DURATION+HANDOFF_LEAD;
 export const clamp = (n:number, low=0, high=1) => Math.min(high,Math.max(low,n));
 export function sceneAtTime(t:number) {return t<3.9 ? 'intro' : t<6.8 ? 'back' : t<11.6 ? 'profile' : 'front';}
 export type Scene = ReturnType<typeof sceneAtTime>;
-export type FilmMode = 'intro' | 'transition' | 'blocked' | 'idle';
-type Options={root:HTMLElement;video:HTMLVideoElement;onScene:(scene:Scene)=>void;onMode:(mode:FilmMode)=>void;onReady:()=>void;onError:()=>void;onFrame:(time:number)=>void};
-export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFrame}:Options) {
+export type FilmMode = 'intro' | 'transition' | 'settling' | 'blocked' | 'idle';
+type Options={root:HTMLElement;video:HTMLVideoElement;onScene:(scene:Scene)=>void;onMode:(mode:FilmMode)=>void;onReady:()=>void;onError:()=>void;onFrame:(time:number)=>void;onHandoff?:(time:number,progress:number)=>void};
+export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFrame,onHandoff}:Options) {
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
   const controller=new AbortController();
+  const nativeFrames=typeof video.requestVideoFrameCallback==='function';
+  let videoFrame=0,settleStart=0,handoffStart:number|null=null;
   let raf=0,ready=false,disposed=false,blobUrl='',lastScene:Scene='intro';
   let reduced=reduce.matches,mode:FilmMode='intro',blockedMode:'intro'|'transition'='intro';
   let stopIndex=0,targetIndex=0,target:number=INTRO_END,direction=1,playRequest=0;
@@ -20,7 +25,15 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   let touchY:number|null=null,touchX=0;
   const setMode=(next:FilmMode)=>{mode=next;root.dataset.mode=next;onMode(next)};
   const setScene=(t:number)=>{const s=sceneAtTime(t);if(lastScene!==s){lastScene=s;onScene(s)}};
-  const active=()=>mode==='intro'||mode==='transition';
+  const playing=()=>mode==='intro'||mode==='transition';
+  const active=()=>playing()||mode==='settling';
+  function cancelFrame(){if(videoFrame){video.cancelVideoFrameCallback(videoFrame);videoFrame=0}}
+  function watchFrame(){if(nativeFrames&&!videoFrame&&!disposed&&playing()&&direction>0)videoFrame=video.requestVideoFrameCallback(presented)}
+  function presented(_now:number,frame:VideoFrameCallbackMetadata){
+    videoFrame=0;if(disposed||!playing()||direction<0)return;
+    if(frame.mediaTime>=target-1e-6){finish(frame.mediaTime);return}
+    paint(frame.mediaTime);watchFrame();
+  }
   function paint(t:number) {
     root.dataset.time=t.toFixed(3);
     root.style.setProperty('--progress',String(clamp((t-INTRO_END)/(SCENE_STOPS[2]-INTRO_END))));
@@ -36,23 +49,39 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     root.style.setProperty('--artwork-width',`${fit.artworkWidth}px`);
     root.style.setProperty('--artwork-height',`${fit.artworkHeight}px`);
     root.style.setProperty('--intro-fade',String(1-clamp((t-3.8)/.25)));
+    if(playing()&&ready){
+      const rate=direction>0?video.playbackRate:Math.abs(reverseFrom-target)/PLAYBACK_DURATION;
+      const remaining=Math.abs(t-target)/Math.max(.0625,rate);
+      if(remaining<=HANDOFF_LEAD){
+        const elapsed=HANDOFF_LEAD-remaining;
+        if(handoffStart===null)handoffStart=performance.now()-elapsed*1000;
+        onHandoff?.(target,elapsed/SETTLE_DURATION);
+      }
+    }
     setScene(t);onFrame(t);
   }
   function layout(){root.style.height=`${innerHeight}px`;scrollTo({top:0,behavior:'instant'});paint(ready?video.currentTime:mode==='idle'?target:0)}
-  function finish(){
-    if(disposed||!active())return;
-    video.pause();playRequest++;stopIndex=targetIndex;
-    if(ready&&Math.abs(video.currentTime-target)>.001)video.currentTime=target;
-    setMode('idle');paint(target);wheelDistance=0;inputAfter=performance.now()+350;
+  function finish(displayedTime=video.currentTime){
+    if(disposed||!playing())return;
+    video.pause();cancelFrame();playRequest++;stopIndex=targetIndex;
+    // Keep the frame that the decoder has actually presented. A tiny forced
+    // seek here used to rewind/redecode at every stop and visibly hitch.
+    if(ready&&Math.abs(displayedTime-target)>1/24+.001)video.currentTime=target;
+    settleStart=handoffStart??performance.now();setMode('settling');paint(target);
+    wheelDistance=0;inputAfter=settleStart+350;wake();
   }
   function tick(now:number){
     raf=0;if(!active()||disposed)return;
-    if(direction>0){
-      if(video.currentTime>=target){finish();return}
-      if(video.readyState>=2)paint(video.currentTime);
+    if(mode==='settling'){
+      if(now-settleStart>=SETTLE_DURATION*1000){setMode('idle');paint(target);return}
+    }else if(direction>0){
+      if(!nativeFrames){
+        if(video.currentTime>=target){finish();return}
+        if(video.readyState>=2)paint(video.currentTime);
+      }
     }else{
       if(!reverseStart)reverseStart=now;
-      const progress=clamp((now-reverseStart)/(TRANSITION_DURATION*1000));
+      const progress=clamp((now-reverseStart)/(PLAYBACK_DURATION*1000));
       const time=progress===1?target:reverseFrom+(target-reverseFrom)*progress;
       if(!video.seeking){
         if(time===target&&Math.abs(video.currentTime-target)<1/48){finish();return}
@@ -66,10 +95,10 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     if(disposed||!ready||reduced)return;
     // Every scene change has the same duration, regardless of clip length.
     // Keep the opening logo sequence at its original speed, including replays.
-    video.playbackRate=next==='intro'?1:Math.max(.0625,(target-video.currentTime)/TRANSITION_DURATION);
-    const request=++playRequest;blockedMode=next;direction=1;setMode(next);wake();
+    video.playbackRate=next==='intro'?1:Math.max(.0625,(target-video.currentTime)/PLAYBACK_DURATION);
+    const request=++playRequest;blockedMode=next;direction=1;handoffStart=null;setMode(next);wake();watchFrame();
     try{await video.play()}
-    catch{if(!disposed&&request===playRequest){setMode('blocked')}}
+    catch{if(!disposed&&request===playRequest){cancelFrame();setMode('blocked')}}
   }
   function goTo(time:number){
     if(disposed||mode!=='idle')return;
@@ -78,7 +107,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     targetIndex=index;target=SCENE_STOPS[index];
     if(reduced){stopIndex=index;paint(target);return}
     if(target>video.currentTime){void playForward('transition')}
-    else{video.pause();playRequest++;direction=-1;reverseStart=0;reverseFrom=video.currentTime;setMode('transition');wake()}
+    else{video.pause();cancelFrame();playRequest++;direction=-1;handoffStart=null;reverseStart=0;reverseFrom=video.currentTime;setMode('transition');wake()}
   }
   function step(direction:number){
     if(mode!=='idle')return;
@@ -88,22 +117,22 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function replayIntro(){
     if(disposed)return;
     if(reduced){targetIndex=stopIndex=0;target=INTRO_END;paint(target);return}
-    video.pause();playRequest++;targetIndex=0;target=INTRO_END;direction=1;
+    video.pause();cancelFrame();playRequest++;targetIndex=0;target=INTRO_END;direction=1;
     root.dataset.painted='false';paint(0);setMode('intro');
     if(ready){video.currentTime=0;void playForward('intro')}
   }
   function resume(){if(mode==='blocked')void playForward(blockedMode)}
   function seeked(){if(disposed)return;root.dataset.painted='true';paint(video.currentTime);wake()}
   function data(){if(!disposed){root.dataset.painted='true';paint(video.currentTime)}}
-  function timeupdate(){if(active()&&direction>0&&video.currentTime>=target)finish()}
+  function timeupdate(){if(!nativeFrames&&playing()&&direction>0&&video.currentTime>=target)finish()}
   function fail(){
-    if(disposed)return;video.pause();playRequest++;ready=false;reduced=true;
+    if(disposed)return;video.pause();cancelFrame();playRequest++;ready=false;reduced=true;
     root.dataset.fallback='true';targetIndex=stopIndex=0;target=INTRO_END;
     setMode('idle');onError();paint(target);
   }
   async function load(){
     try{
-      const response=await fetch('./assets/hero-scrub-4k.mp4',{signal:controller.signal});
+      const response=await fetch('./assets/hero-scrub-4k.mp4?v=bt709-1',{signal:controller.signal});
       if(!response.ok)throw new Error('film unavailable');
       const blob=await response.blob();if(disposed)return;
       blobUrl=URL.createObjectURL(blob);video.src=blobUrl;video.load();
@@ -157,7 +186,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   root.dataset.reduced=String(reduced);setMode(reduced?'idle':'intro');layout();
   if(reduced){onReady();paint(target)}else void load();
   return {goTo,next:()=>step(1),replayIntro,resume,dispose:()=>{
-    disposed=true;playRequest++;controller.abort();cancelAnimationFrame(raf);video.pause();
+    disposed=true;playRequest++;controller.abort();cancelAnimationFrame(raf);cancelFrame();video.pause();
     video.removeEventListener('loadedmetadata',metadata);video.removeEventListener('loadeddata',data);
     video.removeEventListener('seeked',seeked);video.removeEventListener('error',fail);video.removeEventListener('timeupdate',timeupdate);
     video.removeAttribute('src');video.load();if(blobUrl)URL.revokeObjectURL(blobUrl);

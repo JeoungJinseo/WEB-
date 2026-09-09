@@ -1,0 +1,68 @@
+{
+  "back": {
+    "frame": 104,
+    "time": 4.333333333333333,
+    "width": 384,
+    "height": 273,
+    "range": 0.12,
+    "tone_lut_entries": 256,
+    "original_background_rgb": [
+      225.0,
+      7.0,
+      1.0
+    ],
+    "movie_background_rgb": [
+      240.0,
+      26.0,
+      0.0
+    ],
+    "source_sha256": "00a5bb8339a130ae1eee0c4529045dca2265e00aaee17c6a1f78bf8e49a3d67e",
+    "mean_subject_difference_before": 3.992,
+    "mean_subject_difference_after": 3.545,
+    "displacement_95px": 5.647
+  },
+  "profile": {
+    "frame": 208,
+    "time": 8.666666666666666,
+    "width": 384,
+    "height": 273,
+    "range": 0.12,
+    "tone_lut_entries": 256,
+    "original_background_rgb": [
+      237.0,
+      5.0,
+      5.0
+    ],
+    "movie_background_rgb": [
+      249.0,
+      31.0,
+      0.0
+    ],
+    "source_sha256": "d6cbbd2dcd1e99c8595bfb1190db3363a1cdda194ac32f9b11079730e82d3aad",
+    "mean_subject_difference_before": 31.452,
+    "mean_subject_difference_after": 5.571,
+    "displacement_95px": 22.32
+  },
+  "front": {
+    "frame": 340,
+    "time": 14.166666666666666,
+    "width": 384,
+    "height": 273,
+    "range": 0.12,
+    "tone_lut_entries": 256,
+    "original_background_rgb": [
+      233.0,
+      6.0,
+      2.0
+    ],
+    "movie_background_rgb": [
+      247.0,
+      26.0,
+      0.0
+    ],
+    "source_sha256": "b3241e06f416005fee0850f26a55afa32b1c8218d6e36f3349eead3de7057737",
+    "mean_subject_difference_before": 6.708,
+    "mean_subject_difference_after": 3.377,
+    "displacement_95px": 12.022
+  }
+}

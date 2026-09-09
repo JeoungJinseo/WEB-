@@ -36,24 +36,24 @@ void main(){
   sampleUV.y+=breath*(.006*lift*center+.004*torso);
   // Extend the existing red at the edges, never enlarge/crop the character.
   if(outside){
-    sampleUV=vec2(sceneUV.x<.5?.116:.884,clamp(sceneUV.y,.015,.985));
+    sampleUV=clamp(sceneUV,vec2(.116,0.0),vec2(.884,1.0));
   }
   vec4 c=texture2D(film,sampleUV);
-  // Portrait layouts reserve a reading area below the complete scene.
-  if(filmRect.w<.55)c.rgb*=1.0-smoothstep(.82,1.0,sceneUV.y);
   float subject=1.0-smoothstep(.10,.69,c.r);
   if(foregroundOnly>.5){gl_FragColor=vec4(c.rgb,outside?0.0:subject);return;}
   // Upward advection, irregular wisps and soft columns behind both shoulders.
-  float sway=sin(uv.y*11.0-clock*.38)*.025;
-  float columns=exp(-pow((uv.x-.31-sway)/.082,2.0))
-    +exp(-pow((uv.x-.72+sway)/.085,2.0))
-    +.25*exp(-pow((uv.x-.50-sway)/.13,2.0));
-  vec2 flow=uv*vec2(16.0,9.0)+vec2(clock*.035,clock*.36);
+  // Keep the vapor behind the subject when the artboard is fitted.
+  vec2 vaporUV=sceneUV;
+  float sway=sin(vaporUV.y*11.0-clock*.38)*.025;
+  float columns=exp(-pow((vaporUV.x-.31-sway)/.082,2.0))
+    +exp(-pow((vaporUV.x-.72+sway)/.085,2.0))
+    +.25*exp(-pow((vaporUV.x-.50-sway)/.13,2.0));
+  vec2 flow=vaporUV*vec2(16.0,9.0)+vec2(clock*.035,clock*.36);
   flow.x+=(noise(flow*.55+vec2(0.0,clock*.08))-.5)*1.6;
   // Narrow, separated wisps reveal upward motion instead of a static haze.
   float vapor=smoothstep(.47,.72,mist(flow));
-  float edges=smoothstep(.10,.115,uv.x)*(1.0-smoothstep(.885,.90,uv.x));
-  float height=smoothstep(.015,.12,uv.y)*(1.0-smoothstep(.86,1.0,uv.y));
+  float edges=smoothstep(.10,.115,vaporUV.x)*(1.0-smoothstep(.885,.90,vaporUV.x));
+  float height=smoothstep(.015,.12,vaporUV.y)*(1.0-smoothstep(.86,1.0,vaporUV.y));
   // Red-background key keeps the vapor off the original dark silhouette.
   float behind=smoothstep(.65,.89,c.r);
   float alpha=min(columns,1.2)*vapor*height*edges*behind*steam*.40;

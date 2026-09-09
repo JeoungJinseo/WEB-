@@ -30,7 +30,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     root.style.setProperty('--composition-width',`${fit.compositionWidth}px`);
     root.style.setProperty('--composition-height',`${fit.compositionHeight}px`);
     root.style.setProperty('--composition-top',`${fit.compositionTop}px`);
-    root.style.setProperty('--copy-top',`${fit.copyTop}px`);
+    root.style.setProperty('--composition-scale',String(fit.compositionScale));
     root.style.setProperty('--intro-fade',String(1-clamp((t-3.8)/.25)));
     setScene(t);onFrame(t);
   }

@@ -95,7 +95,7 @@ void main(){
   float height=smoothstep(.025,.18,vaporUV.y)*(1.0-smoothstep(.80,1.0,vaporUV.y));
   // Red-background key keeps the vapor off the original dark silhouette.
   float behind=smoothstep(.65,.89,c.r);
-  float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.48;
+  float alpha=min(columns,1.0)*vapor*height*edges*behind*steam*.41;
   gl_FragColor=vec4(mix(c.rgb,vec3(1.0,.82,.75),alpha),1.0);
 }`;
 

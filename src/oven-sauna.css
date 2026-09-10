@@ -9,16 +9,19 @@
 .oven-page button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .oven-page button:focus-visible{outline:2px solid var(--sauna-paper);outline-offset:6px}
 .oven-page button:disabled{cursor:default}
-.oven-header{position:fixed;z-index:60;inset:0 0 auto;min-height:100px;padding:23px 4.35vw;display:flex;align-items:center;justify-content:space-between;gap:30px;background:linear-gradient(180deg,#080000cc,#08000066 65%,transparent);font-size:14px}
-.oven-brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left;padding:0;flex-shrink:0}
-.oven-brand>img{display:block;width:clamp(168px,13.5vw,260px);height:auto;object-fit:contain;transform:none}
-.oven-brand small{font:400 10px/1.4 Archivo,Arial,sans-serif;letter-spacing:.02em;color:#ffffffb3;white-space:nowrap}
-.oven-nav{position:absolute;left:31%;right:27%;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:13px;font-weight:700;white-space:nowrap}
-.oven-nav button{position:relative;padding:12px 0;transition:opacity .2s}
-.oven-nav button::after{content:'';position:absolute;left:0;bottom:4px;width:100%;height:1px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .3s}
-.oven-nav button[aria-current]::after,.oven-nav button:not(:disabled):hover::after{transform:scaleX(1)}
-.oven-nav button:disabled{opacity:.6}
-.oven-page .oven-contact{background:#090000;border-radius:100px;color:var(--sauna-red);min-width:114px;padding:12px 19px;font-size:14px}
+/* Reference chrome uses one 1440 × 1024 coordinate system, scaled as a unit. */
+.oven-chrome{position:fixed;z-index:60;top:0;left:0;width:var(--oven-ui-width,100vw);height:var(--oven-ui-height,100dvh);transform:scale(var(--oven-ui-scale,1));transform-origin:0 0;pointer-events:none;font-family:Utendo,Pretendard,sans-serif;font-size:16px;line-height:normal}
+.oven-header{position:absolute;inset:0 0 auto;height:110px;pointer-events:auto}
+.oven-brand{position:absolute;top:25.5px;left:4.3472%;display:flex;align-items:center;gap:13.1px;padding:0;text-align:left}
+.oven-brand-mark{display:block;flex-shrink:0;width:42.5px;height:39.3px;margin:8px;max-width:none;transform:rotate(-45deg)}
+.oven-brand-type{display:flex;flex-direction:column;align-items:flex-start}
+.oven-brand-type strong{display:block;font:400 26.381px/1.1 'Highman Trial',sans-serif;color:#f1f1f1;white-space:nowrap}
+.oven-brand-type small{display:block;padding-top:8.029px;font:400 13.018px Utendo,Pretendard,sans-serif;color:#bdbdbd;white-space:nowrap}
+.oven-nav{position:absolute;top:36.19px;left:28%;right:28%;display:flex;justify-content:space-between;align-items:center;gap:0;font-size:15px;font-weight:700;white-space:nowrap}
+.oven-page .oven-nav button{position:relative;padding:17px 0;color:#c4c4c4;line-height:1.35}
+.oven-page .oven-nav button[aria-current]{color:#fff}
+.oven-nav button[aria-current]::after{content:'';position:absolute;left:-4px;right:-4px;bottom:6px;height:2px;background:#fff}
+.oven-page .oven-contact{position:absolute;top:42.19px;right:4.8958%;width:143.048px;padding:12.021px;background:#000;border-radius:100px;color:var(--sauna-red);font-size:18.031px;line-height:1.35;white-space:nowrap}
 .sauna-atmosphere{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;background:#000}
 .sauna-background{position:absolute;inset:0;background-position:center;background-size:100% 100%}
 .sauna-background-intro{background-image:url('/atmosphere/intro-background.png')}
@@ -44,17 +47,24 @@
 .sauna-scene canvas{display:block;width:100%;height:100%}
 .sauna-fallback{display:block;position:absolute;inset:25% 20% 18%;width:60%;height:57%;object-fit:contain}
 .sauna-copy{position:fixed;z-index:4;pointer-events:none;inset:0;text-align:center}
-.oven-footer{position:fixed;z-index:60;left:4.35vw;right:4.35vw;bottom:25px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;font-size:10px;line-height:1.4;color:#ffffffb3}
+.oven-footer{position:absolute;inset:0;pointer-events:none;font:400 10.905px Utendo,Pretendard,sans-serif;color:#b5b5b5}
+.oven-footer>span{position:absolute;top:91.9209%}
+.oven-footer>span:first-child{left:5%}
+.oven-footer>span:last-child{right:4.8285%}
 .sauna-error{position:fixed;inset:35% 8% auto;text-align:center;z-index:100;color:var(--sauna-paper);background:#300000;padding:30px;font-size:16px}
 .oven-page .sauna-error button{display:block;margin:16px auto 0;text-decoration:underline}
 @keyframes sauna-heat-pass{from{transform:translateX(-105%)}to{transform:translateX(70%)}}
 @keyframes sauna-mist-rise{0%{transform:translate3d(-3%,12%,0) scale(.9);opacity:0}25%{opacity:.38}65%{opacity:.26}100%{transform:translate3d(5%,-37%,0) scale(1.3);opacity:0}}
-@media(min-width:761px) and (max-width:1100px){.oven-brand small{font-size:9px}.oven-brand>img{width:168px}.oven-nav{left:34%;right:20%;font-size:12px;gap:15px}.oven-page .oven-contact{min-width:100px;font-size:12px;padding:12px 15px}}
-@media(max-width:760px){
- .oven-header{min-height:132px;padding:20px 6vw 68px;align-items:flex-start;background:linear-gradient(180deg,#080000dd,#08000055 75%,transparent)}
- .oven-brand{gap:5px}.oven-brand small{font-size:8px}.oven-brand>img{width:158px}
- .oven-page .oven-contact{font-size:11px;min-width:90px;padding:11px 12px;margin-top:0}
- .oven-nav{top:86px;left:6vw;right:6vw;font-size:12px;gap:18px}
+@media(max-aspect-ratio:1){
+ .oven-header{height:160px}
+ .oven-brand{top:24px;left:5%;gap:8px}
+ .oven-brand-mark{width:34px;height:34px;margin:5px}
+ .oven-brand-type strong{font-size:25px}
+ .oven-brand-type small{font-size:11px}
+ .oven-nav{top:100px;left:5%;right:5%;font-size:18px}
+ .oven-page .oven-contact{top:29px;right:5%;width:auto;padding:13px 20px;font-size:17px}
+ .oven-footer{font-size:10px}
+ .oven-footer>span{top:auto;bottom:5%}
 }
 @media(prefers-reduced-motion:reduce){.sauna-background-mist img,.sauna-heat-bands i::after{animation:none}.sauna-heat-bands i{filter:blur(1.8px)}.oven-page *{scroll-behavior:auto!important}}
 

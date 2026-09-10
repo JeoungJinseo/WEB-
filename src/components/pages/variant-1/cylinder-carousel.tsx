@@ -283,7 +283,6 @@ export function CylinderCarousel() {
           </div>
         ))}
       </div>
-      <footer className="oven-footer"><span>GOOBNE OVEN SAUNA</span><span>2026 DDP YOUNG DESIGNER</span></footer>
       <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>
       {loadError && <div className="sauna-error" role="alert">그래픽을 불러오지 못했습니다.<button onClick={() => window.location.reload()}>다시 불러오기</button></div>}
       <div ref={wrapperRef} id="smooth-wrapper"><div ref={contentRef} id="smooth-content"><div ref={containerRef} style={{ height: '500svh' }} /></div></div>

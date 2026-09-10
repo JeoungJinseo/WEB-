@@ -19,8 +19,8 @@ export const imageRepeat = 2;
 export const perspectives: Perspective[] = [
   {
     eyebrow: 'BRAND STRATEGIES',
-    title: 'OUR CORE VALUE',
-    description: '오븐의 뜨거움과 사우나의 열기를 하나의 감각으로 연결합니다.\n강렬한 레드와 흐르는 형태가 OVEN SAUNA의 그래픽을 이룹니다.',
+    title: 'OVEN SAUNA GRAPHICS',
+    description: '오븐의 열기와 사우나의 감각을 여섯 장의 그래픽으로 담았습니다.\n스크롤하며 스티커부터 포스터, 수건까지 이어지는 디자인을 살펴보세요.',
     position: 'top',
   },
   {

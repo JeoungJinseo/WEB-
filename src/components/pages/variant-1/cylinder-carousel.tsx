@@ -154,7 +154,9 @@ export function CylinderCarousel() {
       }
 
       context.add(() => {
-        gsap.set(textRefs.current, { autoAlpha: 0 });
+        // The opening copy must be readable before the first scroll input.
+        gsap.set(textRefs.current.slice(1), { autoAlpha: 0 });
+        gsap.set(textRefs.current[0], { autoAlpha: 1 });
         timeline = gsap.timeline({
           scrollTrigger: { trigger: containerRef.current, start: 'top top', end: 'bottom bottom',
             scrub: reducedMotion ? true : 1, invalidateOnRefresh: true },
@@ -204,7 +206,7 @@ export function CylinderCarousel() {
             start: `${index * 25}% top`, end: `${(index + 1) * 25}% top`,
             scrub: reducedMotion ? true : .8,
           } })
-            .fromTo(element, { autoAlpha: 0 }, { autoAlpha: 1, duration: .2, ease: 'saunaSmooth' })
+            .fromTo(element, { autoAlpha: index === 0 ? 1 : 0 }, { autoAlpha: 1, duration: .2, ease: 'saunaSmooth' })
             .to(element, { autoAlpha: 1, duration: .6, ease: 'none' })
             .to(element, { autoAlpha: 0, duration: .2, ease: 'saunaSmooth' });
         });

@@ -55,6 +55,6 @@ export const cylinderConfig = {
 export const particleConfig = {
   numParticles: 12,
   particleRadius: 3.3, // cylinderRadius + 0.8
-  segments: 64,
-  angleSpan: 0.85,
+  segments: 20,
+  angleSpan: 0.3,
 };

@@ -13,7 +13,6 @@ import type { ParticleMesh } from '@/lib/variant-1/types';
 import Loader from '@/components/loader';
 import { OvenFrame } from '@/components/oven-frame';
 import { SaunaAtmosphere } from '@/components/sauna-atmosphere';
-import { SaunaSteam } from '@/components/sauna-steam';
 import '@/oven-sauna.css';
 
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother, CustomEase);
@@ -43,14 +42,13 @@ export function CylinderCarousel() {
     let timeline: gsap.core.Timeline | undefined;
     let renderer: Renderer | undefined;
     let texture: Texture | undefined;
+    let steamTexture: Texture | undefined;
     let cylinder: Mesh | undefined;
     let camera: Camera | undefined;
     let scene: Transform | undefined;
     const particles: ParticleMesh[] = [];
     const cameraPosition = { x: 0, y: 0, z: 8, fov: 45 };
     let previousRotation = 0.5;
-    let previousFrameTime = 0;
-    let steamTime = 0;
     let currentChapter = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const smoother = ScrollSmoother.create({
@@ -77,9 +75,8 @@ export function CylinderCarousel() {
       cameraPosition.fov = size.fov;
       camera?.perspective({ fov: size.fov, aspect: size.width / size.height });
       cylinder?.scale.set(size.scale, size.scale, size.scale);
-      particles.forEach(particle => particle.scale.set(size.scale, size.scale, size.scale));
     };
-    const originals = images.map(src => new Promise<HTMLImageElement>((resolve, reject) => {
+    const originals = [...images, './atmosphere/steam-reference.png'].map(src => new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = reject;
@@ -88,6 +85,7 @@ export function CylinderCarousel() {
 
     Promise.all(originals).then(loaded => {
       if (disposed) return;
+      const smokeImage = loaded.pop()!;
       try {
         const size = dimensions();
         renderer = new Renderer({ canvas: canvasRef.current!, width: size.width, height: size.height,
@@ -110,6 +108,8 @@ export function CylinderCarousel() {
         loaded.forEach((image, index) => drawImageContain(ctx, image, index * unit * 4, 0, unit * 4, atlas.height));
         texture = new Texture(gl, { image: atlas, wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
           minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
+        steamTexture = new Texture(gl, { image: smokeImage, wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
+          minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
         const program = new Program(gl, { vertex: cylinderVertex, fragment: cylinderFragment,
           uniforms: { tMap: { value: texture }, uImageCount: { value: images.length }, uImageRepeat: { value: imageRepeat }, uDarkness: { value: 0 } }, cullFace: null });
         cylinder = new Mesh(gl, { geometry: createCylinderGeometry(gl, cylinderConfig), program });
@@ -121,15 +121,15 @@ export function CylinderCarousel() {
           const particle = new Mesh(gl, { geometry, program: new Program(gl, {
             vertex: particleVertex, fragment: particleFragment,
             uniforms: {
-              uColor: { value: [1, .96, .91] }, uOpacity: { value: reducedMotion ? 0 : .32 },
-              uTime: { value: 0 }, uBaseAngle: { value: userData.baseAngle },
+              uColor: { value: [1, .96, .91] }, uOpacity: { value: 0 },
+              tSteam: { value: steamTexture },
+              uBaseAngle: { value: userData.baseAngle },
               uAngleSpan: { value: userData.angleSpan }, uRadius: { value: userData.radius },
               uBaseY: { value: userData.baseY }, uPhase: { value: userData.phase },
               uWidth: { value: userData.width },
             }, transparent: true, depthTest: true, depthWrite: false, cullFace: null,
           }), frustumCulled: false }) as ParticleMesh;
           particle.userData = userData;
-          particle.scale.set(size.scale, size.scale, size.scale);
           particle.setParent(scene);
           particles.push(particle);
         }
@@ -153,10 +153,6 @@ export function CylinderCarousel() {
         timeline.to('.sauna-background-left', { opacity: 1, duration: 10, ease: 'none' }, 20);
         timeline.to('.sauna-background-right', { opacity: 1, duration: 10, ease: 'none' }, 50);
         timeline.to('.sauna-background-right', { opacity: 0, duration: 10, ease: 'none' }, 86);
-        if (!reducedMotion) {
-          timeline.fromTo('.sauna-steam-trails', { yPercent: 5, rotation: -3 },
-            { yPercent: -5, rotation: 3, duration: 100, ease: 'none' }, 0);
-        }
         // Original Codrops timings: 1 + 1 + 2 + 3.5 + 1 = 8.5 units.
         const unit = 100 / 8.5;
         timeline.fromTo(cameraPosition, { x: 0, y: 0, z: () => dimensions().cameraZ },
@@ -204,13 +200,10 @@ export function CylinderCarousel() {
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
       window.addEventListener('resize', resize);
-      const animate = (time: number) => {
+      const animate = () => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);
-        const delta = previousFrameTime ? Math.min((time - previousFrameTime) / 1000, .05) : 1 / 60;
-        previousFrameTime = time;
         if (document.hidden) return;
-        if (!reducedMotion) steamTime += delta;
         if (!renderer || !camera || !scene || !cylinder) return;
         if (Math.abs(camera.fov - cameraPosition.fov) > .001) {
           camera.perspective({ fov: cameraPosition.fov, aspect: window.innerWidth / window.innerHeight });
@@ -219,15 +212,17 @@ export function CylinderCarousel() {
         camera.lookAt([0, 0, 0]);
         const velocity = cylinder.rotation.y - previousRotation;
         previousRotation = cylinder.rotation.y;
+        // Match Codrops' particle animation exactly: no idle drift or overlay.
+        const speed = Math.abs(velocity) * 100;
+        const isRotating = !reducedMotion && Math.abs(velocity) > .0001;
         particles.forEach(particle => {
           const uniforms = particle.program.uniforms;
-          const targetOpacity = reducedMotion ? 0 : .32 + Math.min(Math.abs(velocity) / Math.max(delta, .001) * .1, .18);
-          uniforms.uOpacity.value += (targetOpacity - uniforms.uOpacity.value) * (1 - Math.exp(-delta * 9));
-          if (reducedMotion) return;
+          const targetOpacity = isRotating ? Math.min(speed * 3, .95) : 0;
+          uniforms.uOpacity.value += (targetOpacity - uniforms.uOpacity.value) * .15;
+          if (!isRotating) return;
           const data = particle.userData;
-          data.baseAngle += velocity * data.speed + delta * .045 * data.speed;
+          data.baseAngle += velocity * data.speed * 1.5;
           uniforms.uBaseAngle.value = data.baseAngle;
-          uniforms.uTime.value = steamTime;
         });
         renderer.render({ scene, camera });
       };
@@ -249,6 +244,7 @@ export function CylinderCarousel() {
       cylinder?.geometry.remove();
       cylinder?.program.remove();
       if (renderer && texture) renderer.gl.deleteTexture(texture.texture);
+      if (renderer && steamTexture) renderer.gl.deleteTexture(steamTexture.texture);
     };
   }, []);
 
@@ -263,7 +259,6 @@ export function CylinderCarousel() {
       <div className="sauna-scene" aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
         {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
       </div>
-      <SaunaSteam />
       <div className="sauna-copy">
         {perspectives.map((perspective, index) => (
           <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}

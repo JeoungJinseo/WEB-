@@ -111,10 +111,12 @@ export function createParticleGeometry(
   const uvs = new Float32Array((segments + 1) * 2 * 2);
   const indices: number[] = [];
   const startAngle = (index / numParticles) * Math.PI * 2;
-  const variation = (Math.sin((index + 1) * 12.9898) * 43758.5453) % 1;
-  const seed = Math.abs(variation);
+  // Preserve the original arc distribution, height bands and random speeds.
+  const seed = Math.random();
   const isTopHalf = index < numParticles / 2;
-  const yPosition = (isTopHalf ? 1 : -1) * height * (.78 + seed * .35);
+  const yPosition = isTopHalf
+    ? height * .7 + seed * height * .3
+    : -height + seed * height * .3;
 
   for (let j = 0; j <= segments; j++) {
     const t = j / segments;
@@ -133,12 +135,12 @@ export function createParticleGeometry(
     }),
     userData: {
       baseAngle: startAngle,
-      angleSpan: angleSpan * (.75 + seed * .5),
+      angleSpan,
       baseY: yPosition,
-      speed: .5 + seed,
-      radius: particleRadius + Math.cos(index * 2.3) * .3,
+      speed: .5 + Math.random(),
+      radius: particleRadius,
       phase: index * 2.39996,
-      width: .12 + seed * .05,
+      width: .065,
     },
   };
 }

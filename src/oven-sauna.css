@@ -41,13 +41,6 @@
 .sauna-background-mist img:nth-child(2){left:-2%;animation-delay:-13s}
 .sauna-scene{position:fixed;inset:0;z-index:2;pointer-events:none}
 .sauna-scene canvas{display:block;width:100%;height:100%}
-.sauna-steam-trails{position:fixed;inset:-5%;width:110%;height:110%;z-index:3;pointer-events:none;overflow:visible}
-.sauna-steam-trail{fill:none;stroke:url(#sauna-steam-fade);stroke-linecap:round;animation:sauna-steam-float 17s ease-in-out infinite alternate;transform-origin:center}
-.sauna-steam-trail-1{animation-duration:23s;animation-delay:-9s}
-.sauna-steam-trail-2{animation-duration:19s;animation-delay:-5s}
-.sauna-steam-core{stroke-width:2.8;opacity:.3;filter:blur(1px);vector-effect:non-scaling-stroke}
-.sauna-steam-halo{stroke-width:18;opacity:.12;filter:url(#sauna-steam-halo);vector-effect:non-scaling-stroke}
-@keyframes sauna-steam-float{from{transform:translate(-1%,2%) skewY(-1deg);opacity:.65}to{transform:translate(2%,-3%) skewY(1.5deg);opacity:1}}
 .sauna-fallback{display:block;position:absolute;inset:25% 20% 18%;width:60%;height:57%;object-fit:contain}
 .sauna-copy{position:fixed;z-index:4;pointer-events:none;inset:0;text-align:center}
 .oven-footer{position:fixed;z-index:60;left:4.35vw;right:4.35vw;bottom:25px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;font-size:10px;line-height:1.4;color:#ffffffb3}
@@ -62,7 +55,7 @@
  .oven-page .oven-contact{font-size:11px;min-width:90px;padding:11px 12px;margin-top:0}
  .oven-nav{top:86px;left:6vw;right:6vw;font-size:12px;gap:18px}
 }
-@media(prefers-reduced-motion:reduce){.sauna-background-mist img,.sauna-heat-bands i::after,.sauna-steam-trail{animation:none}.sauna-heat-bands i{filter:blur(1.8px)}.oven-page *{scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){.sauna-background-mist img,.sauna-heat-bands i::after{animation:none}.sauna-heat-bands i{filter:blur(1.8px)}.oven-page *{scroll-behavior:auto!important}}
 
 /* Same 3:1 type ratio and composition; smaller Highman matches its heavier face. */
 .sauna-perspective{position:absolute;isolation:isolate;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 64px);opacity:0;visibility:hidden;text-align:center}

@@ -5,6 +5,7 @@
 @font-face{font-family:Pretendard;src:url('/brand/pretendard-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 
 .demo-1{--sauna-red:#ED0505;--sauna-ink:#080000;--sauna-paper:#fff;--sauna-line:#ffffff33;background:#000;color:var(--sauna-paper);font-family:Utendo,Arial,sans-serif}
+.oven-page{--oven-header-height:132px}
 .oven-page button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .oven-page button:focus-visible{outline:2px solid var(--sauna-paper);outline-offset:6px}
 .oven-page button:disabled{cursor:default}
@@ -57,19 +58,18 @@
 }
 @media(prefers-reduced-motion:reduce){.sauna-background-mist img,.sauna-heat-bands i::after{animation:none}.sauna-heat-bands i{filter:blur(1.8px)}.oven-page *{scroll-behavior:auto!important}}
 
-/* Same 3:1 type ratio and composition; smaller Highman matches its heavier face. */
-.sauna-perspective{position:absolute;isolation:isolate;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 64px);opacity:0;visibility:hidden;text-align:center}
-.sauna-perspective::before{content:'';position:absolute;inset:-32px -60px;z-index:-1;pointer-events:none;background:radial-gradient(ellipse,#000b 15%,#0007 50%,transparent 75%);filter:blur(20px)}
-.sauna-perspective h2{font-family:'Highman Trial','Arial Narrow',sans-serif;font-size:60px;font-weight:400;line-height:.8;letter-spacing:0;color:var(--sauna-red);margin:0;text-transform:uppercase;font-synthesis:none;text-wrap:balance;text-shadow:0 2px 12px #0009}
-.sauna-perspective .sauna-perspective-description{font-family:Archivo,Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:20px;font-weight:400;font-style:normal;line-height:1.5;letter-spacing:0;color:#fff;opacity:1;margin:12px auto 0;max-width:960px;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty;font-synthesis:none;text-shadow:0 2px 8px #000}
-.sauna-perspective-0{top:80px;transform:translateX(-50%)}
-.sauna-perspective-3{top:auto;bottom:80px;transform:translateX(-50%)}
+/* Plain type; the live header measurement reserves space above every caption. */
+.sauna-perspective{--sauna-copy-height:144px;position:absolute;left:50%;top:max(50%,calc(var(--oven-header-height) + 24px + var(--sauna-copy-height)/2));transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 64px);opacity:0;visibility:hidden;text-align:center}
+.sauna-perspective h2{font-family:'Highman Trial','Arial Narrow',sans-serif;font-size:60px;font-weight:400;line-height:.8;letter-spacing:0;color:var(--sauna-red);margin:0;text-transform:uppercase;font-synthesis:none;text-wrap:balance}
+.sauna-perspective .sauna-perspective-description{font-family:Archivo,Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:18px;font-weight:400;font-style:normal;line-height:1.6;letter-spacing:0;color:rgb(255 255 255 / .82);margin:12px auto 0;max-width:880px;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty;font-synthesis:none}
+.sauna-perspective-0{top:calc(var(--oven-header-height) + 28px);transform:translateX(-50%)}
+.sauna-perspective-3{top:max(calc(100% - 80px - var(--sauna-copy-height)),calc(var(--oven-header-height) + 24px));transform:translateX(-50%)}
 .oven-page .sauna-scroll-hint{position:fixed;z-index:60;right:4.35vw;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px;font:400 14px Archivo,Arial,sans-serif;opacity:.65}
 .sauna-scroll-hint>span{font:400 28px Archivo,Arial,sans-serif}
 @media(max-width:767px){
  .sauna-perspective{width:100%;max-width:100%;padding:0 24px}
  .sauna-perspective h2{font-size:30px}
  .sauna-perspective .sauna-perspective-description{font-size:16px;line-height:1.5;white-space:normal}
- .sauna-perspective-0{top:25vh}
+ .sauna-perspective-0{top:max(25vh,calc(var(--oven-header-height) + 24px))}
  .oven-page .sauna-scroll-hint{right:6vw;bottom:60px;font-size:14px}
 }

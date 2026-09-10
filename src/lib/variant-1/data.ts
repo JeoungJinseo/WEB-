@@ -9,12 +9,11 @@ export const images = [
   './oven-sauna/06-towel.png',
 ];
 
-// Each original is approximately 4:5. Contain fitting preserves the small
-// differences between their exact dimensions without cropping any artwork.
+// Originals remain intact in a 4:5 atlas. The material cover-fits each tile
+// within the reference cylinder, preserving proportions with narrow side crops.
 export const imageConfig = { width: 480, height: 600 };
 // Repeat the six artworks around the ring without lowering texture resolution.
-// Twelve narrower panels keep the portrait artwork proportional to the original
-// cinematic ribbon, and let several complete graphics share the inside view.
+// Keep the reference's twelve-panel rhythm with six repeating artworks.
 export const imageRepeat = 2;
 
 export const perspectives: Perspective[] = [
@@ -46,9 +45,9 @@ export const perspectives: Perspective[] = [
 
 export const cylinderConfig = {
   radius: 2.5,
-  // Match the physical surface to the repeated atlas; never stretch the artwork.
-  height: (2 * Math.PI * 2.5 * imageConfig.height) / (images.length * imageRepeat * imageConfig.width),
-  radialSegments: 192,
+  // Preserve the reference ring's silhouette; fit image UVs independently.
+  height: 2,
+  radialSegments: 64,
   heightSegments: 1,
 };
 

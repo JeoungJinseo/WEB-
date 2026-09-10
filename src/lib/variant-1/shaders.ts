@@ -19,6 +19,8 @@ export const cylinderFragment = /* glsl */ `
   uniform sampler2D tMap;
   uniform float uImageCount;
   uniform float uImageRepeat;
+  uniform float uPanelAspect;
+  uniform float uArtworkAspect;
   uniform float uDarkness; // 0.0 = normal, 1.0 = fully black
 
   varying vec2 vUv;
@@ -32,7 +34,14 @@ export const cylinderFragment = /* glsl */ `
     float tileU = vUv.x * panelCount - panel;
     if (gl_FrontFacing) tileU = 1.0 - tileU;
     float tile = mod(panel, uImageCount);
-    vec2 artworkUv = vec2((tile + tileU) / uImageCount, vUv.y);
+    // Cover-fit the portrait within the original ring height without stretching.
+    vec2 panelUv = vec2(tileU, vUv.y);
+    if (uPanelAspect < uArtworkAspect) {
+      panelUv.x = (panelUv.x - 0.5) * uPanelAspect / uArtworkAspect + 0.5;
+    } else {
+      panelUv.y = (panelUv.y - 0.5) * uArtworkAspect / uPanelAspect + 0.5;
+    }
+    vec2 artworkUv = vec2((tile + panelUv.x) / uImageCount, panelUv.y);
     vec4 tex = texture2D(tMap, artworkUv);
 
     // Darken the texture
@@ -102,6 +111,8 @@ export const particleFragment = /* glsl */ `
     float alpha = (core * 0.3 + strand * 0.13 + haze * 0.12)
                 * edge * taper * density * uOpacity;
     if (alpha < 0.002) discard;
-    gl_FragColor = vec4(uColor, alpha);
+    // The canvas is transparent over the red background. Premultiplied output
+    // prevents the browser compositor from multiplying the faint steam again.
+    gl_FragColor = vec4(uColor * alpha, alpha);
   }
 `;

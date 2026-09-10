@@ -1,11 +1,28 @@
+import { useEffect, useRef } from 'react';
+
 interface OvenFrameProps {
   chapter: number;
   onNavigate: (progress: number) => void;
 }
 
 export function OvenFrame({ chapter, onNavigate }: OvenFrameProps) {
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    const page = header?.parentElement;
+    if (!header || !page) return;
+    const syncHeight = () => page.style.setProperty('--oven-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      page.style.removeProperty('--oven-header-height');
+    };
+  }, []);
+
   return (
-    <header className="oven-header">
+    <header ref={headerRef} className="oven-header">
       <button className="oven-brand" aria-label="GOOBNE OVEN SAUNA 시작으로" onClick={() => onNavigate(0)}>
         <img src="./brand/oven-sauna-logo.svg" width="993" height="245" alt="OVEN SAUNA" />
         <small>2026 DDP YOUNG DESIGNER</small>

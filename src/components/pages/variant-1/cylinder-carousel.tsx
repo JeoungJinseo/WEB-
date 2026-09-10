@@ -35,6 +35,17 @@ export function CylinderCarousel() {
   const navigateRef = useRef<(progress: number) => void>(() => {});
 
   useEffect(() => {
+    const captions = textRefs.current.filter((element): element is HTMLDivElement => element !== null);
+    const measureCaptions = () => captions.forEach(element => {
+      element.style.setProperty('--sauna-copy-height', `${Math.ceil(element.getBoundingClientRect().height)}px`);
+    });
+    measureCaptions();
+    const observer = new ResizeObserver(measureCaptions);
+    captions.forEach(element => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!canvasRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
     let disposed = false;
@@ -89,7 +100,7 @@ export function CylinderCarousel() {
       try {
         const size = dimensions();
         renderer = new Renderer({ canvas: canvasRef.current!, width: size.width, height: size.height,
-          dpr: Math.min(window.devicePixelRatio, 2), alpha: true, antialias: true });
+          dpr: Math.min(window.devicePixelRatio, 2), alpha: true, premultipliedAlpha: true, antialias: true });
         const gl = renderer.gl;
         gl.clearColor(0, 0, 0, 0);
         camera = new Camera(gl, { fov: size.fov, aspect: size.width / size.height });
@@ -111,7 +122,11 @@ export function CylinderCarousel() {
         steamTexture = new Texture(gl, { image: smokeImage, wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
           minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
         const program = new Program(gl, { vertex: cylinderVertex, fragment: cylinderFragment,
-          uniforms: { tMap: { value: texture }, uImageCount: { value: images.length }, uImageRepeat: { value: imageRepeat }, uDarkness: { value: 0 } }, cullFace: null });
+          uniforms: {
+            tMap: { value: texture }, uImageCount: { value: images.length }, uImageRepeat: { value: imageRepeat },
+            uPanelAspect: { value: 2 * Math.PI * cylinderConfig.radius / (images.length * imageRepeat * cylinderConfig.height) },
+            uArtworkAspect: { value: imageConfig.width / imageConfig.height }, uDarkness: { value: .3 },
+          }, cullFace: null });
         cylinder = new Mesh(gl, { geometry: createCylinderGeometry(gl, cylinderConfig), program });
         cylinder.setParent(scene);
         cylinder.rotation.y = .5;

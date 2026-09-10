@@ -7,14 +7,14 @@ export function OvenFrame({ chapter, onNavigate }: OvenFrameProps) {
   return (
     <header className="oven-header">
       <button className="oven-brand" aria-label="GOOBNE OVEN SAUNA 시작으로" onClick={() => onNavigate(0)}>
-        <img src="./brand/mark.svg" width="43" height="39" alt="" />
-        <span><strong>GOOBNE OVEN SAUNA</strong><small>2026 DDP YOUNG DESIGNER</small></span>
+        <img src="./brand/oven-sauna-logo.svg" width="993" height="245" alt="OVEN SAUNA" />
+        <small>2026 DDP YOUNG DESIGNER</small>
       </button>
       <nav className="oven-nav" aria-label="메인 메뉴">
         {[
           { label: 'HOME', progress: 0 },
           { label: 'ABOUT', progress: 0.34 },
-          { label: 'PROJECT', progress: 0.68 },
+          { label: 'PROJECT', progress: 0.58 },
         ].map((item, index) => (
           <button key={item.label} aria-current={Math.min(chapter, 2) === index ? 'location' : undefined}
             onClick={() => onNavigate(item.progress)}>{item.label}</button>

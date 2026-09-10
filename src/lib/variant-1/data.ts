@@ -19,23 +19,27 @@ export const imageRepeat = 2;
 
 export const perspectives: Perspective[] = [
   {
-    title: 'Immersive experiences',
-    description: 'Where creativity comes to life',
+    eyebrow: 'BRAND STRATEGIES',
+    title: 'OUR CORE VALUE',
+    description: '오븐의 뜨거움과 사우나의 열기를 하나의 감각으로 연결합니다.\n강렬한 레드와 흐르는 형태가 OVEN SAUNA의 그래픽을 이룹니다.',
     position: 'top',
   },
   {
-    title: 'Infinite Perspective',
-    description: 'Explore new dimensions',
+    eyebrow: 'GRAPHIC LANGUAGE',
+    title: 'SHAPED BY HEAT',
+    description: '열기에 녹아 흐르는 듯한 레터링에 거친 표면의 질감을 더했습니다.\n유연한 곡선과 단단한 표지판의 대비로 생생한 에너지를 표현합니다.',
     position: 'center',
   },
   {
-    title: 'Inside the Universe',
-    description: 'Immerse yourself in the extraordinary',
+    eyebrow: 'GRAPHIC SYSTEM',
+    title: 'ONE IDENTITY',
+    description: '스티커, 티켓, 표지판, 포스터와 수건까지.\n서로 다른 재질 위에 같은 로고와 레드를 반복해 하나의 인상으로 연결합니다.',
     position: 'center',
   },
   {
-    title: 'OVEN SAUNA',
-    description: '2026 DDP YOUNG DESIGNER',
+    eyebrow: 'BRAND EXPERIENCE',
+    title: 'FEEL THE HEAT',
+    description: '김 서린 유리와 촘촘한 패브릭, 빛바랜 금속의 표면.\n눈으로 보는 이미지에 촉감과 온도를 더해 사우나의 분위기를 전달합니다.',
     position: 'bottom',
   },
 ];

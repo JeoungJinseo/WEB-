@@ -131,6 +131,7 @@ export function CylinderCarousel() {
 
       context.add(() => {
         gsap.set(textRefs.current, { autoAlpha: 0 });
+        gsap.set(textRefs.current[0], { autoAlpha: 1 });
         timeline = gsap.timeline({
           scrollTrigger: { trigger: containerRef.current, start: 'top top', end: 'bottom bottom',
             scrub: reducedMotion ? true : .65, invalidateOnRefresh: true },
@@ -176,9 +177,10 @@ export function CylinderCarousel() {
           timeline.to(cylinder.rotation, { y: Math.PI * 7 + .5, duration: 14, ease: 'power1.inOut' }, 86);
         }
         const textWindows = [
-          { start: 1, end: 19 },
+          { start: 0, end: 19 },
           { start: 23, end: 42 },
-          { start: 51, end: 86 },
+          // Explain the graphic system on entry, then leave the inside view clear.
+          { start: 51, end: 66 },
           { start: 91, end: 100 },
         ];
         textRefs.current.forEach((element, index) => {
@@ -244,7 +246,7 @@ export function CylinderCarousel() {
   }, []);
 
   const navigate = (progress: number) => navigateRef.current(progress);
-  const nextScene = () => navigate(chapter === 0 ? .34 : chapter === 1 ? .68 : chapter === 2 ? 1 : 0);
+  const nextScene = () => navigate(chapter === 0 ? .34 : chapter === 1 ? .58 : chapter === 2 ? 1 : 0);
 
   return (
     <div className="oven-page" ref={rootRef}>
@@ -258,8 +260,9 @@ export function CylinderCarousel() {
         {perspectives.map((perspective, index) => (
           <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
             ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
+            {perspective.eyebrow && <p className="sauna-perspective-eyebrow">{perspective.eyebrow}</p>}
             <h2>{perspective.title}</h2>
-            {perspective.description && <p>{perspective.description}</p>}
+            {perspective.description && <p className="sauna-perspective-description" lang="ko">{perspective.description}</p>}
           </div>
         ))}
       </div>

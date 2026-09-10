@@ -1,17 +1,17 @@
 @font-face{font-family:Utendo;src:url('/brand/utendo-regular.ttf') format('truetype');font-weight:400;font-display:swap}
 @font-face{font-family:Utendo;src:url('/brand/utendo-bold.ttf') format('truetype');font-weight:700;font-display:swap}
-@font-face{font-family:Highman;src:url('/brand/highman.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'Highman Trial';src:url('/brand/highman.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:Archivo;src:url('/brand/archivo-variable.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:Pretendard;src:url('/brand/pretendard-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 
-.demo-1{--sauna-red:#ED0505;--sauna-ink:#080000;--sauna-paper:#fff;--sauna-line:#ffffff33;background:#080000;color:var(--sauna-paper);font-family:Utendo,Arial,sans-serif}
+.demo-1{--sauna-red:#ED0505;--sauna-ink:#080000;--sauna-paper:#fff;--sauna-line:#ffffff33;--heading-size:135pt;--body-size:22pt;--eyebrow-size:42pt;background:#080000;color:var(--sauna-paper);font-family:Utendo,Arial,sans-serif}
 .oven-page button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .oven-page button:focus-visible{outline:2px solid var(--sauna-paper);outline-offset:6px}
 .oven-page button:disabled{cursor:default}
-.oven-header{position:fixed;z-index:60;inset:0 0 auto;min-height:100px;padding:23px 4.35vw;display:flex;align-items:center;justify-content:space-between;gap:30px;background:linear-gradient(#ED050526,transparent);font-size:14px}
-.oven-brand{display:flex;align-items:center;gap:14px;text-align:left;padding:0;flex-shrink:0}
-.oven-brand>img{width:36px;height:auto;transform:rotate(-45deg)}
-.oven-brand>span{display:flex;flex-direction:column;gap:6px}
-.oven-brand strong{font:400 23px/1 Highman,'Arial Narrow',sans-serif;white-space:nowrap}
-.oven-brand small{font-size:10px;letter-spacing:.01em;color:#ffffffb3;white-space:nowrap}
+.oven-header{position:fixed;z-index:60;inset:0 0 auto;min-height:100px;padding:23px 4.35vw;display:flex;align-items:center;justify-content:space-between;gap:30px;background:linear-gradient(180deg,#080000cc,#08000066 65%,transparent);font-size:14px}
+.oven-brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left;padding:0;flex-shrink:0}
+.oven-brand>img{display:block;width:clamp(168px,13.5vw,260px);height:auto;object-fit:contain;transform:none}
+.oven-brand small{font:400 10px/1.4 Archivo,Arial,sans-serif;letter-spacing:.02em;color:#ffffffb3;white-space:nowrap}
 .oven-nav{position:absolute;left:31%;right:27%;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:13px;font-weight:700;white-space:nowrap}
 .oven-nav button{position:relative;padding:12px 0;transition:opacity .2s}
 .oven-nav button::after{content:'';position:absolute;left:0;bottom:4px;width:100%;height:1px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .3s}
@@ -32,27 +32,36 @@
 .oven-page .sauna-error button{display:block;margin:16px auto 0;text-decoration:underline}
 @keyframes sauna-drift{from{transform:translate(-3%,7%) rotate(-5deg);opacity:.5}to{transform:translate(4%,-7%) rotate(5deg);opacity:1}}
 @keyframes sauna-breathe{from{transform:scale(.97);opacity:.6}to{transform:scale(1.08);opacity:1}}
-@media(min-width:761px) and (max-width:1100px){.oven-brand strong{font-size:20px}.oven-brand small{font-size:9px}.oven-brand>img{width:29px}.oven-nav{left:34%;right:20%;font-size:12px;gap:15px}.oven-page .oven-contact{min-width:100px;font-size:12px;padding:12px 15px}}
+@media(min-width:761px) and (max-width:1100px){.oven-brand small{font-size:9px}.oven-brand>img{width:168px}.oven-nav{left:34%;right:20%;font-size:12px;gap:15px}.oven-page .oven-contact{min-width:100px;font-size:12px;padding:12px 15px}}
 @media(max-width:760px){
- .oven-header{min-height:132px;padding:20px 6vw 68px;align-items:flex-start;background:linear-gradient(#ED050533,transparent)}
- .oven-brand{gap:9px}.oven-brand strong{font-size:22px}.oven-brand small{font-size:9px}.oven-brand>img{width:30px}
+ .oven-header{min-height:132px;padding:20px 6vw 68px;align-items:flex-start;background:linear-gradient(180deg,#080000dd,#08000055 75%,transparent)}
+ .oven-brand{gap:5px}.oven-brand small{font-size:8px}.oven-brand>img{width:158px}
  .oven-page .oven-contact{font-size:11px;min-width:90px;padding:11px 12px;margin-top:0}
  .oven-nav{top:86px;left:6vw;right:6vw;font-size:12px;gap:18px}
 }
 @media(prefers-reduced-motion:reduce){.sauna-glow,.sauna-vapor{animation:none}.oven-page *{scroll-behavior:auto!important}}
 
-/* The original continuous cylinder remains visible throughout every chapter. */
-.sauna-perspective{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(90vw,1400px);opacity:0;visibility:hidden;text-align:center}
-.sauna-perspective h2{font-family:'freightdispcmp-pro',Georgia,serif;font-size:clamp(44px,5.8vw,106px);font-weight:300;line-height:.98;margin:0;letter-spacing:-.02em;text-shadow:0 2px 26px #0000001f}
-.sauna-perspective p{font-family:'freightdispcmp-pro',Georgia,serif;font-size:clamp(18px,2vw,32px);line-height:1.25;opacity:.63;margin:14px 0 0}
-.sauna-perspective-0{top:23%;transform:translateX(-50%)}
-.sauna-perspective-3{top:auto;bottom:15%;transform:translateX(-50%)}
-.oven-page .sauna-scroll-hint{position:fixed;z-index:60;right:4.35vw;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px;font:400 14px 'freightdispcmp-pro',Georgia,serif;opacity:.65}
-.sauna-scroll-hint>span{font:300 28px Utendo,Arial,sans-serif}
+/* Editorial copy stays in the existing scroll scene, without a separate page. */
+.sauna-perspective{position:absolute;isolation:isolate;left:4.35vw;top:50%;transform:translateY(-50%);width:min(91.3vw,1550px);opacity:0;visibility:hidden;text-align:left}
+.sauna-perspective::before{content:'';position:absolute;z-index:-1;left:-6vw;right:10%;top:-42px;bottom:-45px;pointer-events:none;background:linear-gradient(90deg,#080000e8 0%,#080000a3 55%,transparent 100%);filter:blur(28px)}
+.sauna-perspective .sauna-perspective-eyebrow{font-family:'Highman Trial','Arial Narrow',sans-serif;font-size:clamp(28px,2.917vw,var(--eyebrow-size));font-weight:400;line-height:1.1;letter-spacing:.015em;color:var(--sauna-red);margin:0 0 18px;font-synthesis:none}
+.sauna-perspective h2{font-family:'Highman Trial','Arial Narrow',sans-serif;font-size:clamp(64px,9.375vw,var(--heading-size));font-weight:400;line-height:1;letter-spacing:.008em;margin:0;text-transform:uppercase;font-synthesis:none;text-wrap:balance}
+.sauna-perspective .sauna-perspective-description{font-family:Archivo,Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:clamp(18px,1.528vw,var(--body-size));font-weight:400;font-style:normal;line-height:1.6;letter-spacing:-.015em;color:#fff;margin:26px 0 0;max-width:1150px;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty;font-synthesis:none}
+.sauna-perspective-0{top:47%}
+.sauna-perspective-3{top:50%}
+.oven-page .sauna-scroll-hint{position:fixed;z-index:60;right:4.35vw;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px;font:400 14px Archivo,Arial,sans-serif;opacity:.65}
+.sauna-scroll-hint>span{font:400 28px Archivo,Arial,sans-serif}
 @media(max-width:760px){
- .sauna-perspective h2{font-size:clamp(32px,7vw,48px)}
- .sauna-perspective p{font-size:18px;max-width:85vw;margin:12px auto 0}
- .sauna-perspective-0{top:23%}
- .sauna-perspective-3{bottom:21%}
+ .sauna-perspective{left:6vw;width:88vw;top:50%}
+ .sauna-perspective .sauna-perspective-eyebrow{font-size:28px;margin-bottom:13px}
+ .sauna-perspective h2{font-size:clamp(54px,10vw,76px);line-height:1.04;letter-spacing:0}
+ .sauna-perspective .sauna-perspective-description{font-size:18px;line-height:1.65;margin-top:20px;max-width:100%;white-space:normal}
+ .sauna-perspective::before{left:-10vw;right:-3vw;top:-30px;bottom:-32px;background:linear-gradient(90deg,#080000e8,#080000b3 75%,#08000033);filter:blur(22px)}
  .oven-page .sauna-scroll-hint{right:6vw;bottom:60px;font-size:14px}
+}
+@media(max-height:650px) and (min-width:761px){
+ .sauna-perspective{top:54%}
+ .sauna-perspective .sauna-perspective-eyebrow{font-size:30px;margin-bottom:10px}
+ .sauna-perspective h2{font-size:clamp(64px,8vw,112px)}
+ .sauna-perspective .sauna-perspective-description{font-size:18px;line-height:1.5;margin-top:14px}
 }

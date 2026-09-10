@@ -1,4 +1,5 @@
 export interface Perspective {
+    eyebrow?: string
     title: string
     description?: string
     position: "top" | "top-left" | "left" | "center" | "top-right" | "bottom" | "bottom-left" | "bottom-right"

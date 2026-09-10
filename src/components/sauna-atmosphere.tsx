@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { SaunaVapor } from '@/components/sauna-vapor';
 
 /** The same background exports and heat bands as the supplied DDP depth gallery. */
 export function SaunaAtmosphere() {
@@ -38,13 +39,10 @@ export function SaunaAtmosphere() {
         </svg>
         <div className="sauna-heat-bands"><i /><i /><i /><i /></div>
         <div className="sauna-heat-glow" />
-        <div className="sauna-background-mist">
-          <img src="./atmosphere/intro-mist.png" alt="" draggable="false" />
-          <img src="./atmosphere/intro-mist.png" alt="" draggable="false" />
-        </div>
       </div>
       <div className="sauna-background sauna-background-left" />
       <div className="sauna-background sauna-background-right" />
+      <SaunaVapor />
     </div>
   );
 }

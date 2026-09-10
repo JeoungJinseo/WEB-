@@ -27,7 +27,6 @@ export function CylinderCarousel() {
   const [hasWebGL, setHasWebGL] = useState(true);
   const [chapter, setChapter] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -36,7 +35,7 @@ export function CylinderCarousel() {
   const navigateRef = useRef<(progress: number) => void>(() => {});
 
   useEffect(() => {
-    if (!canvasRef.current || !sceneRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
+    if (!canvasRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
     let disposed = false;
     let animationFrame = 0;
@@ -49,6 +48,11 @@ export function CylinderCarousel() {
     let scene: Transform | undefined;
     const particles: ParticleMesh[] = [];
     const cameraPosition = { x: 0, y: 0, z: 8, fov: 45 };
+    // Only the initial, stationary view reserves room for its introduction.
+    // The canvas always fills the viewport; the opening lens offset blends
+    // back to the original projection before the camera starts its flight.
+    const openingBlend = { value: 1 };
+    let opening = { fov: 45, shift: 0, copyTop: 0, centeredCopyTop: 0 };
     let previousRotation = 0.5;
     let currentChapter = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -62,19 +66,12 @@ export function CylinderCarousel() {
     const context = gsap.context(() => {}, rootRef.current);
 
     const dimensions = () => {
-      const viewportWidth = window.innerWidth;
-      const width = Math.max(1, sceneRef.current!.clientWidth);
-      const height = Math.max(1, sceneRef.current!.clientHeight);
-      const radius = viewportWidth < 768 ? 1.8 : viewportWidth < 1024 ? 2.2 : 2.5;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const radius = width < 768 ? 1.8 : width < 1024 ? 2.2 : 2.5;
       const scale = radius / cylinderConfig.radius;
-      const baseFov = viewportWidth < 768 ? 50 : 45;
-      const cameraZ = viewportWidth < 768 ? 6 : viewportWidth < 1024 ? 7 : 8;
-      // Use the real canvas aspect ratio. Preserve a generous opening ring size
-      // while containing it horizontally and reserving the separate caption row.
-      const tangent = Math.tan(baseFov * Math.PI / 360);
-      const projectedWidth = radius / (tangent * Math.sqrt(cameraZ ** 2 - radius ** 2));
-      const framingHeight = Math.min(window.innerHeight, height * 1.35, width * .9 / projectedWidth);
-      const fov = 2 * Math.atan(tangent * height / framingHeight) * 180 / Math.PI;
+      const fov = width < 768 ? 50 : 45;
+      const cameraZ = width < 768 ? 6 : width < 1024 ? 7 : 8;
       return { width, height, scale, fov, cameraZ };
     };
     const resize = () => {
@@ -83,10 +80,38 @@ export function CylinderCarousel() {
       cameraPosition.fov = size.fov;
       camera?.perspective({ fov: size.fov, aspect: size.width / size.height });
       cylinder?.scale.set(size.scale, size.scale, size.scale);
+      textRefs.current.forEach(element => {
+        if (element) element.style.setProperty('--sauna-copy-height', `${Math.ceil(element.getBoundingClientRect().height)}px`);
+      });
+      const captionHeight = textRefs.current[0]?.getBoundingClientRect().height ?? 144;
+      const headerHeight = parseFloat(getComputedStyle(rootRef.current!).getPropertyValue('--oven-header-height')) || 0;
+      const top = headerHeight + 24;
+      const bottom = size.height - Math.max(88, size.height * .1);
+      const gap = Math.min(32, Math.max(16, size.height * .028));
+      const imageHeight = Math.max(1, bottom - top - captionHeight - gap);
+      const radius = cylinderConfig.radius * size.scale;
+      const halfHeight = cylinderConfig.height * size.scale / 2;
+      // Fit the entire opening cylinder by changing its projection, never by
+      // cropping the renderer. All later views use the original field of view.
+      const tangent = Math.max(
+        Math.tan(size.fov * Math.PI / 360),
+        size.height * halfHeight / (imageHeight * (size.cameraZ - radius)),
+        size.height * radius / (Math.max(1, size.width - 48) * Math.sqrt(size.cameraZ ** 2 - radius ** 2)),
+      );
+      const ringHeight = size.height * halfHeight / (tangent * (size.cameraZ - radius));
+      const groupTop = top + (bottom - top - ringHeight - gap - captionHeight) / 2;
+      opening = {
+        fov: 2 * Math.atan(tangent) * 180 / Math.PI,
+        shift: 2 * (groupTop + ringHeight / 2) / size.height - 1,
+        copyTop: groupTop + ringHeight + gap,
+        centeredCopyTop: Math.max(size.height / 2 - captionHeight / 2, top),
+      };
+      rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * openingBlend.value}px`);
     };
-    const sceneObserver = new ResizeObserver(resize);
-    sceneObserver.observe(sceneRef.current);
+    const captionObserver = new ResizeObserver(resize);
+    textRefs.current.forEach(element => { if (element) captionObserver.observe(element); });
     window.addEventListener('resize', resize);
+    resize();
     const originals = [...images, './atmosphere/steam-reference.png'].map(src => new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
@@ -172,6 +197,7 @@ export function CylinderCarousel() {
         timeline.to('.sauna-background-right', { opacity: 0, duration: 10, ease: 'none' }, 86);
         // Original Codrops timings: 1 + 1 + 2 + 3.5 + 1 = 8.5 units.
         const unit = 100 / 8.5;
+        timeline.fromTo(openingBlend, { value: 1 }, { value: 0, duration: unit, ease: 'saunaSmooth' }, 0);
         timeline.fromTo(cameraPosition, { x: 0, y: 0, z: () => dimensions().cameraZ },
           { x: 0, y: 0, z: () => dimensions().cameraZ, duration: unit, ease: 'saunaSilk' }, 0);
         timeline.to(cameraPosition, {
@@ -216,15 +242,17 @@ export function CylinderCarousel() {
         if (!trigger) return;
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
+      resize();
       const animate = () => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);
         if (document.hidden) return;
         if (!renderer || !camera || !scene || !cylinder) return;
-        if (Math.abs(camera.fov - cameraPosition.fov) > .001) {
-          const size = dimensions();
-          camera.perspective({ fov: cameraPosition.fov, aspect: size.width / size.height });
-        }
+        const blend = openingBlend.value;
+        const fov = cameraPosition.fov + (opening.fov - cameraPosition.fov) * blend;
+        camera.perspective({ fov, aspect: window.innerWidth / window.innerHeight });
+        camera.projectionMatrix[9] = opening.shift * blend;
+        rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * blend}px`);
         camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         camera.lookAt([0, 0, 0]);
         const velocity = cylinder.rotation.y - previousRotation;
@@ -245,7 +273,7 @@ export function CylinderCarousel() {
       };
       animationFrame = requestAnimationFrame(animate);
       setIsLoading(false);
-      document.fonts.ready.then(() => { if (!disposed) ScrollTrigger.refresh(); });
+      document.fonts.ready.then(() => { if (!disposed) { resize(); ScrollTrigger.refresh(); } });
     }).catch(() => {
       if (!disposed) { setIsLoading(false); setLoadError(true); }
     });
@@ -253,7 +281,8 @@ export function CylinderCarousel() {
     return () => {
       disposed = true;
       cancelAnimationFrame(animationFrame);
-      sceneObserver.disconnect();
+      captionObserver.disconnect();
+      rootRef.current?.style.removeProperty('--sauna-intro-copy-top');
       window.removeEventListener('resize', resize);
       navigateRef.current = () => {};
       context.revert();
@@ -274,19 +303,17 @@ export function CylinderCarousel() {
       <Loader isLoading={isLoading} className="bg-[#ED0505]" classNameLoader="bg-white" />
       <SaunaAtmosphere />
       <OvenFrame chapter={chapter} onNavigate={navigate} />
-      <div className="sauna-exhibit">
-        <div className="sauna-scene" ref={sceneRef} aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
-          {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
-        </div>
-        <div className="sauna-copy">
-          {perspectives.map((perspective, index) => (
-            <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
-              ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
-              <h2>{perspective.title}</h2>
-              {perspective.description && <p className="sauna-perspective-description" lang="ko">{perspective.description}</p>}
-            </div>
-          ))}
-        </div>
+      <div className="sauna-scene" aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
+        {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
+      </div>
+      <div className="sauna-copy">
+        {perspectives.map((perspective, index) => (
+          <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
+            ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
+            <h2>{perspective.title}</h2>
+            {perspective.description && <p className="sauna-perspective-description" lang="ko">{perspective.description}</p>}
+          </div>
+        ))}
       </div>
       <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>
       {loadError && <div className="sauna-error" role="alert">그래픽을 불러오지 못했습니다.<button onClick={() => window.location.reload()}>다시 불러오기</button></div>}

@@ -21,19 +21,19 @@ export const perspectives: Perspective[] = [
     eyebrow: 'BRAND STRATEGIES',
     title: 'OVEN SAUNA GRAPHICS',
     description: '오븐의 열기와 사우나의 감각을 여섯 장의 그래픽으로 담았습니다.\n스크롤하며 스티커부터 포스터, 수건까지 이어지는 디자인을 살펴보세요.',
-    position: 'bottom',
+    position: 'center',
   },
   {
     eyebrow: 'GRAPHIC LANGUAGE',
     title: 'SHAPED BY HEAT',
     description: '열기에 녹아 흐르는 듯한 레터링에 거친 표면의 질감을 더했습니다.\n유연한 곡선과 단단한 표지판의 대비로 생생한 에너지를 표현합니다.',
-    position: 'bottom',
+    position: 'center',
   },
   {
     eyebrow: 'GRAPHIC SYSTEM',
     title: 'ONE IDENTITY',
     description: '스티커, 티켓, 표지판, 포스터와 수건까지.\n서로 다른 재질 위에 같은 로고와 레드를 반복해 하나의 인상으로 연결합니다.',
-    position: 'bottom',
+    position: 'center',
   },
   {
     eyebrow: 'BRAND EXPERIENCE',

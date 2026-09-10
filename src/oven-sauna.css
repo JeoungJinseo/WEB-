@@ -47,11 +47,10 @@
 .sauna-vapor-fallback{position:absolute;inset:0;mask-image:linear-gradient(transparent,#000 18%,#000 75%,transparent)}
 .sauna-vapor-fallback i{position:absolute;left:-15%;bottom:-15%;width:130%;height:130%;background:var(--sauna-red);mask-image:url('/atmosphere/intro-mist.png');mask-mode:luminance;mask-size:100% 100%;filter:blur(10px);opacity:.35;animation:sauna-vapor-rise 24s ease-in-out infinite alternate}
 .sauna-vapor-fallback i:nth-child(2){left:0;opacity:.22;animation-duration:31s;animation-delay:-16s}
-.sauna-exhibit{position:fixed;z-index:2;top:calc(var(--oven-header-height) + 12px);left:0;right:0;bottom:max(100px,12dvh);display:grid;grid-template-rows:minmax(0,1fr) auto;gap:clamp(16px,2.5dvh,32px);pointer-events:none}
-.sauna-scene{position:relative;min-width:0;min-height:0;overflow:hidden}
-.sauna-scene canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
-.sauna-fallback{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-.sauna-copy{display:grid;position:relative;margin:0 auto;width:calc(100% - 64px);max-width:960px;text-align:center}
+.sauna-scene{position:fixed;inset:0;z-index:2;pointer-events:none}
+.sauna-scene canvas{display:block;width:100%;height:100%}
+.sauna-fallback{display:block;position:absolute;inset:25% 20% 18%;width:60%;height:57%;object-fit:contain}
+.sauna-copy{position:fixed;z-index:4;pointer-events:none;inset:0;text-align:center}
 .oven-footer{position:absolute;inset:0;pointer-events:none;font:400 10.905px Utendo,Pretendard,sans-serif;color:#b5b5b5}
 .oven-footer>span{position:absolute;top:91.9209%}
 .oven-footer>span:first-child{left:5%}
@@ -73,22 +72,22 @@
 }
 @media(prefers-reduced-motion:reduce){.sauna-vapor-fallback i,.sauna-heat-bands i::after{animation:none}.sauna-heat-bands i{filter:blur(1.8px)}.oven-page *{scroll-behavior:auto!important}}
 
-/* Every caption occupies the same natural grid row, below the WebGL viewport. */
-.sauna-perspective{grid-area:1/1;align-self:start;justify-self:center;width:100%;min-width:0;opacity:0;visibility:hidden;text-align:center}
+/* Plain type; the live header measurement reserves space above every caption. */
+.sauna-perspective{--sauna-copy-height:144px;position:absolute;left:50%;top:max(50%,calc(var(--oven-header-height) + 24px + var(--sauna-copy-height)/2));transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 64px);opacity:0;visibility:hidden;text-align:center}
 .sauna-perspective h2{display:table;max-width:100%;font-family:'Highman Trial','Arial Narrow',sans-serif;font-size:60px;font-weight:400;line-height:.8;letter-spacing:0;color:var(--sauna-red);margin:0 auto;text-transform:uppercase;font-synthesis:none;text-wrap:balance;text-shadow:0 1px 3px rgb(0 0 0 / .6),0 0 14px rgb(0 0 0 / .38)}
 .sauna-perspective .sauna-perspective-description{font-family:Archivo,Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:18px;font-weight:400;font-style:normal;line-height:1.6;letter-spacing:0;color:rgb(255 255 255 / .82);margin:12px auto 0;max-width:880px;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty;font-synthesis:none}
-.sauna-perspective-0{opacity:1;visibility:visible}
+.sauna-perspective-0{top:var(--sauna-intro-copy-top,72%);transform:translateX(-50%);opacity:1;visibility:visible}
+.sauna-perspective-3{top:max(calc(100% - 80px - var(--sauna-copy-height)),calc(var(--oven-header-height) + 24px));transform:translateX(-50%)}
 .oven-page .sauna-scroll-hint{position:fixed;z-index:60;right:4.35vw;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px;font:400 14px Archivo,Arial,sans-serif;opacity:.65}
 .sauna-scroll-hint>span{font:400 28px Archivo,Arial,sans-serif}
 @media(max-width:767px){
- .sauna-copy{width:calc(100% - 48px)}
+ .sauna-perspective{width:100%;max-width:100%;padding:0 24px}
  .sauna-perspective h2{font-size:30px}
  .sauna-perspective .sauna-perspective-description{font-size:16px;line-height:1.5;white-space:normal}
  .oven-page .sauna-scroll-hint{right:6vw;bottom:60px;font-size:14px}
 }
+
 @media(max-height:560px){
- .sauna-exhibit{top:calc(var(--oven-header-height) + 8px);bottom:64px;gap:12px}
- .sauna-perspective h2{font-size:32px}
- .sauna-perspective .sauna-perspective-description{font-size:14px;line-height:1.4;margin-top:8px}
- .oven-page .sauna-scroll-hint{bottom:40px;font-size:12px;gap:4px}
+ .sauna-perspective-0 h2{font-size:32px}
+ .sauna-perspective-0 .sauna-perspective-description{font-size:16px;line-height:1.4;margin-top:8px}
 }

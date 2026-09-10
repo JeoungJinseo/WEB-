@@ -21,7 +21,7 @@ export const perspectives: Perspective[] = [
     eyebrow: 'BRAND STRATEGIES',
     title: 'OVEN SAUNA GRAPHICS',
     description: '오븐의 열기와 사우나의 감각을 여섯 장의 그래픽으로 담았습니다.\n스크롤하며 스티커부터 포스터, 수건까지 이어지는 디자인을 살펴보세요.',
-    position: 'top',
+    position: 'center',
   },
   {
     eyebrow: 'GRAPHIC LANGUAGE',

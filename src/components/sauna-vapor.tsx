@@ -46,7 +46,8 @@ export function SaunaVapor() {
       frame = 0;
       if (document.hidden || reduced.matches || contextLost) return;
       if (!lastPaint || now - lastPaint >= 32) {
-        elapsed += lastPaint ? Math.min((now - lastPaint) / 1000, .1) : 0;
+        // A faint background drift, at one fifth of the previous flow speed.
+        elapsed += lastPaint ? Math.min((now - lastPaint) / 1000, .1) * .2 : 0;
         lastPaint = now;
         draw();
       }

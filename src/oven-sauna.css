@@ -34,19 +34,19 @@
 .sauna-heat-bands i:nth-child(2){top:15.378%;height:1.089%;opacity:.55}
 .sauna-heat-bands i:nth-child(3){top:18.066%;height:2.026%;opacity:.72}
 .sauna-heat-bands i:nth-child(4){top:21.387%;height:.824%;opacity:.9}
-.sauna-heat-bands i::after{content:'';position:absolute;inset:-12px 0;width:160%;background:linear-gradient(90deg,transparent,#000c 22%,#73000040 44%,var(--sauna-red) 62%,#ED0505a6 71%,transparent 94%);filter:blur(24px);animation:sauna-heat-pass 10.8s linear infinite}
-.sauna-heat-bands i:nth-child(1)::after{animation-duration:12.6s;animation-delay:-4.2s}
-.sauna-heat-bands i:nth-child(2)::after{animation-delay:-6.3s}
-.sauna-heat-bands i:nth-child(3)::after{animation-duration:11.7s;animation-delay:-1.5s}
-.sauna-heat-bands i:nth-child(4)::after{animation-duration:9.9s;animation-delay:-3s}
+.sauna-heat-bands i::after{content:'';position:absolute;inset:-12px 0;width:160%;background:linear-gradient(90deg,transparent,#000c 22%,#73000040 44%,var(--sauna-red) 62%,#ED0505a6 71%,transparent 94%);filter:blur(24px);opacity:.12;animation:sauna-heat-pass 43.2s linear infinite}
+.sauna-heat-bands i:nth-child(1)::after{animation-duration:50.4s;animation-delay:-16.8s}
+.sauna-heat-bands i:nth-child(2)::after{animation-delay:-25.2s}
+.sauna-heat-bands i:nth-child(3)::after{animation-duration:46.8s;animation-delay:-6s}
+.sauna-heat-bands i:nth-child(4)::after{animation-duration:39.6s;animation-delay:-12s}
 .sauna-heat-glow{position:absolute;left:-2%;right:-2%;top:21.5%;height:27%;background:linear-gradient(to bottom,transparent,#ED050545 17%,#aa00001f 43%,transparent);filter:blur(14px)}
-.sauna-vapor{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;mix-blend-mode:screen}
-.sauna-vapor-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;filter:blur(3px);visibility:hidden}
+.sauna-vapor{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;mix-blend-mode:screen;opacity:.12}
+.sauna-vapor-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;filter:blur(14px);visibility:hidden}
 .sauna-vapor[data-ready=true] .sauna-vapor-canvas{visibility:visible}
 .sauna-vapor[data-ready=true] .sauna-vapor-fallback{display:none}
 .sauna-vapor-fallback{position:absolute;inset:0;mask-image:linear-gradient(transparent,#000 18%,#000 75%,transparent)}
-.sauna-vapor-fallback i{position:absolute;left:-15%;bottom:-15%;width:130%;height:130%;background:var(--sauna-red);mask-image:url('/atmosphere/intro-mist.png');mask-mode:luminance;mask-size:100% 100%;filter:blur(10px);opacity:.35;animation:sauna-vapor-rise 24s ease-in-out infinite alternate}
-.sauna-vapor-fallback i:nth-child(2){left:0;opacity:.22;animation-duration:31s;animation-delay:-16s}
+.sauna-vapor-fallback i{position:absolute;left:-15%;bottom:-15%;width:130%;height:130%;background:var(--sauna-red);mask-image:url('/atmosphere/intro-mist.png');mask-mode:luminance;mask-size:100% 100%;filter:blur(10px);opacity:.35;animation:sauna-vapor-rise 64s ease-in-out infinite alternate}
+.sauna-vapor-fallback i:nth-child(2){left:0;opacity:.22;animation-duration:80s;animation-delay:-40s}
 .sauna-scene{position:fixed;inset:0;z-index:2;pointer-events:none}
 .sauna-scene canvas{display:block;width:100%;height:100%}
 .sauna-fallback{display:block;position:absolute;inset:25% 20% 18%;width:60%;height:57%;object-fit:contain}
@@ -58,7 +58,7 @@
 .sauna-error{position:fixed;inset:35% 8% auto;text-align:center;z-index:100;color:var(--sauna-paper);background:#300000;padding:30px;font-size:16px}
 .oven-page .sauna-error button{display:block;margin:16px auto 0;text-decoration:underline}
 @keyframes sauna-heat-pass{from{transform:translateX(-105%)}to{transform:translateX(70%)}}
-@keyframes sauna-vapor-rise{from{transform:translate3d(-4%,8%,0) scale(.95)}to{transform:translate3d(5%,-18%,0) scale(1.15)}}
+@keyframes sauna-vapor-rise{from{transform:translate3d(-1%,2%,0) scale(1)}to{transform:translate3d(1%,-3%,0) scale(1.04)}}
 @media(max-aspect-ratio:1){
  .oven-header{height:160px}
  .oven-brand{top:24px;left:5%;gap:8px}

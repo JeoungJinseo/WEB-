@@ -30,7 +30,7 @@ export function SaunaAtmosphere() {
           <defs>
             <filter id="sauna-band-density" x="-2%" y="-100%" width="104%" height="300%" colorInterpolationFilters="sRGB">
               <feTurbulence type="fractalNoise" baseFrequency=".006 .018" numOctaves="2" seed="21" result="mist">
-                <animate attributeName="baseFrequency" values=".006 .018;.0066 .021;.0056 .019;.006 .018" dur="22s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.333;.667;1" keySplines=".42 0 .58 1;.42 0 .58 1;.42 0 .58 1" />
+                <animate attributeName="baseFrequency" values=".006 .018;.0066 .021;.0056 .019;.006 .018" dur="66s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.333;.667;1" keySplines=".42 0 .58 1;.42 0 .58 1;.42 0 .58 1" />
               </feTurbulence>
               <feColorMatrix in="mist" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.5 0 0 0 -.1" result="density" />
               <feComposite in="SourceGraphic" in2="density" operator="in" />

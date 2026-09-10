@@ -33,11 +33,11 @@ export const vaporFragment = /* glsl */ `
 
   void main() {
     float sway = sin(vUv.y * 8.0 - uClock * .24) * .018;
-    float columns = exp(-pow((vUv.x - .31 - sway) / .094, 2.0))
-      + exp(-pow((vUv.x - .72 + sway) / .099, 2.0));
-    vec2 flow = vUv * vec2(22.0, 6.5) + vec2(uClock * .025, uClock * .23);
+    float columns = exp(-pow((vUv.x - .31 - sway) / .15, 2.0))
+      + exp(-pow((vUv.x - .72 + sway) / .16, 2.0));
+    vec2 flow = vUv * vec2(11.0, 4.0) + vec2(uClock * .025, uClock * .23);
     flow += (vec2(noise(flow * .45 + vec2(0.0, uClock * .055)),
-                  noise(flow * .45 + vec2(8.3, uClock * .04))) - .5) * 2.4;
+                  noise(flow * .45 + vec2(8.3, uClock * .04))) - .5) * .9;
     float vapor = smoothstep(.39, .69, mist(flow));
     vapor *= .65 + .35 * noise(flow * vec2(.8, 1.7) + 13.4);
     float edges = smoothstep(.10, .115, vUv.x) * (1.0 - smoothstep(.885, .90, vUv.x));

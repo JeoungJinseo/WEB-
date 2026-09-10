@@ -96,7 +96,8 @@ export function createCylinderGeometry(gl: WebGLRenderingContext, config: Cylind
 }
 
 /**
- * Creates curved line geometry for a single particle
+ * A camera-facing ribbon gives the steam a soft edge at every pixel density.
+ * Its centerline is animated in the vertex shader, avoiding per-frame uploads.
  */
 export function createParticleGeometry(
   gl: WebGLRenderingContext,
@@ -106,34 +107,38 @@ export function createParticleGeometry(
 ) {
   const { numParticles, particleRadius, segments, angleSpan } = config;
 
-  const linePositions: number[] = [];
+  const positions = new Float32Array((segments + 1) * 2 * 3);
+  const uvs = new Float32Array((segments + 1) * 2 * 2);
+  const indices: number[] = [];
   const startAngle = (index / numParticles) * Math.PI * 2;
-
-  // First half goes to top, second half goes to bottom
+  const variation = (Math.sin((index + 1) * 12.9898) * 43758.5453) % 1;
+  const seed = Math.abs(variation);
   const isTopHalf = index < numParticles / 2;
-  const yPosition = isTopHalf
-    ? height * 0.7 + Math.random() * height * 0.3 // Top: 0.7 to 1.0 of height
-    : -height * 1.0 + Math.random() * height * 0.3; // Bottom: -1.0 to -0.7 of height
+  const yPosition = (isTopHalf ? 1 : -1) * height * (.78 + seed * .35);
 
   for (let j = 0; j <= segments; j++) {
     const t = j / segments;
-    const angle = startAngle + angleSpan * t;
-    const x = Math.cos(angle) * particleRadius;
-    const z = Math.sin(angle) * particleRadius;
-
-    linePositions.push(x, yPosition, z);
+    uvs.set([t, 0, t, 1], j * 4);
+    if (j < segments) {
+      const vertex = j * 2;
+      indices.push(vertex, vertex + 1, vertex + 2, vertex + 1, vertex + 3, vertex + 2);
+    }
   }
 
   return {
     geometry: new Geometry(gl as unknown as OGLRenderingContext, {
-      position: { size: 3, data: new Float32Array(linePositions) },
+      position: { size: 3, data: positions },
+      uv: { size: 2, data: uvs },
+      index: { data: new Uint16Array(indices) },
     }),
     userData: {
       baseAngle: startAngle,
-      angleSpan: angleSpan,
+      angleSpan: angleSpan * (.75 + seed * .5),
       baseY: yPosition,
-      speed: 0.5 + Math.random() * 1.0,
-      radius: particleRadius,
+      speed: .5 + seed,
+      radius: particleRadius + Math.cos(index * 2.3) * .3,
+      phase: index * 2.39996,
+      width: .12 + seed * .05,
     },
   };
 }

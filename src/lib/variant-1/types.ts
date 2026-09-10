@@ -11,6 +11,8 @@ export interface ParticleUserData {
     baseY: number
     speed: number
     radius: number
+    phase: number
+    width: number
 }
 
 export interface CameraAnimation {

@@ -18,6 +18,7 @@ export const cylinderFragment = /* glsl */ `
 
   uniform sampler2D tMap;
   uniform float uImageCount;
+  uniform float uImageRepeat;
   uniform float uDarkness; // 0.0 = normal, 1.0 = fully black
 
   varying vec2 vUv;
@@ -26,9 +27,11 @@ export const cylinderFragment = /* glsl */ `
     // The original cylinder's U direction mirrors artwork on the outside.
     // Flip within each tile on front faces so the same graphic reads correctly
     // both outside the ring and during the camera's flight through its interior.
-    float tile = min(floor(vUv.x * uImageCount), uImageCount - 1.0);
-    float tileU = vUv.x * uImageCount - tile;
+    float panelCount = uImageCount * uImageRepeat;
+    float panel = min(floor(vUv.x * panelCount), panelCount - 1.0);
+    float tileU = vUv.x * panelCount - panel;
     if (gl_FrontFacing) tileU = 1.0 - tileU;
+    float tile = mod(panel, uImageCount);
     vec2 artworkUv = vec2((tile + tileU) / uImageCount, vUv.y);
     vec4 tex = texture2D(tMap, artworkUv);
 

@@ -13,8 +13,8 @@ export function OvenFrame({ chapter, onNavigate }: OvenFrameProps) {
       <nav className="oven-nav" aria-label="메인 메뉴">
         {[
           { label: 'HOME', progress: 0 },
-          { label: 'ABOUT', progress: 0.22 },
-          { label: 'PROJECT', progress: 0.405 },
+          { label: 'ABOUT', progress: 0.34 },
+          { label: 'PROJECT', progress: 0.68 },
         ].map((item, index) => (
           <button key={item.label} aria-current={Math.min(chapter, 2) === index ? 'location' : undefined}
             onClick={() => onNavigate(item.progress)}>{item.label}</button>

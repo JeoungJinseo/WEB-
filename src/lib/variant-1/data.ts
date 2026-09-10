@@ -12,15 +12,10 @@ export const images = [
 // Each original is approximately 4:5. Contain fitting preserves the small
 // differences between their exact dimensions without cropping any artwork.
 export const imageConfig = { width: 480, height: 600 };
-
-export const artworks = [
-  { title: 'STICKER', category: 'ON THE STREET', alt: '철제 기둥에 붙은 붉은 OVEN SAUNA 스티커', width: 481, height: 601 },
-  { title: 'TICKET', category: 'YOUR WAY IN', alt: '검은 바탕에 교차해 놓인 붉은 OVEN SAUNA 입장 팔찌', width: 478, height: 598 },
-  { title: 'SAUNA ONLY', category: 'THE SIGN', alt: 'OVEN SAUNA ONLY 문구가 적힌 빈티지 표지판', width: 480, height: 599 },
-  { title: 'IN YOUR EYES', category: 'THE IDENTITY', alt: '눈동자 위에 놓인 OVEN SAUNA 타이포그래피와 마크', width: 479, height: 598 },
-  { title: 'FEEL THE HEAT', category: 'THE POSTER', alt: '김이 서린 유리 위의 OVEN SAUNA 포스터', width: 478, height: 598 },
-  { title: 'SAUNA TOWEL', category: 'THE TEXTURE', alt: '주황색 수건의 섬유 질감과 SAUNA 그래픽', width: 478, height: 598 },
-];
+// Repeat the six artworks around the ring without lowering texture resolution.
+// Twelve narrower panels keep the portrait artwork proportional to the original
+// cinematic ribbon, and let several complete graphics share the inside view.
+export const imageRepeat = 2;
 
 export const perspectives: Perspective[] = [
   {
@@ -39,15 +34,16 @@ export const perspectives: Perspective[] = [
     position: 'center',
   },
   {
-    title: 'Cinematic GSAP Scroll Experiences',
+    title: 'OVEN SAUNA',
+    description: '2026 DDP YOUNG DESIGNER',
     position: 'bottom',
   },
 ];
 
 export const cylinderConfig = {
   radius: 2.5,
-  // The unwrapped cylinder must have the same aspect ratio as the image atlas.
-  height: (2 * Math.PI * 2.5 * imageConfig.height) / (images.length * imageConfig.width),
+  // Match the physical surface to the repeated atlas; never stretch the artwork.
+  height: (2 * Math.PI * 2.5 * imageConfig.height) / (images.length * imageRepeat * imageConfig.width),
   radialSegments: 192,
   heightSegments: 1,
 };

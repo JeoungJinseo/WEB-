@@ -27,6 +27,7 @@ export function CylinderCarousel() {
   const [hasWebGL, setHasWebGL] = useState(true);
   const [chapter, setChapter] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -35,18 +36,7 @@ export function CylinderCarousel() {
   const navigateRef = useRef<(progress: number) => void>(() => {});
 
   useEffect(() => {
-    const captions = textRefs.current.filter((element): element is HTMLDivElement => element !== null);
-    const measureCaptions = () => captions.forEach(element => {
-      element.style.setProperty('--sauna-copy-height', `${Math.ceil(element.getBoundingClientRect().height)}px`);
-    });
-    measureCaptions();
-    const observer = new ResizeObserver(measureCaptions);
-    captions.forEach(element => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!canvasRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
+    if (!canvasRef.current || !sceneRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
     let disposed = false;
     let animationFrame = 0;
@@ -72,12 +62,19 @@ export function CylinderCarousel() {
     const context = gsap.context(() => {}, rootRef.current);
 
     const dimensions = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const radius = width < 768 ? 1.8 : width < 1024 ? 2.2 : 2.5;
+      const viewportWidth = window.innerWidth;
+      const width = Math.max(1, sceneRef.current!.clientWidth);
+      const height = Math.max(1, sceneRef.current!.clientHeight);
+      const radius = viewportWidth < 768 ? 1.8 : viewportWidth < 1024 ? 2.2 : 2.5;
       const scale = radius / cylinderConfig.radius;
-      const fov = width < 768 ? 50 : 45;
-      const cameraZ = width < 768 ? 6 : width < 1024 ? 7 : 8;
+      const baseFov = viewportWidth < 768 ? 50 : 45;
+      const cameraZ = viewportWidth < 768 ? 6 : viewportWidth < 1024 ? 7 : 8;
+      // Use the real canvas aspect ratio. Preserve a generous opening ring size
+      // while containing it horizontally and reserving the separate caption row.
+      const tangent = Math.tan(baseFov * Math.PI / 360);
+      const projectedWidth = radius / (tangent * Math.sqrt(cameraZ ** 2 - radius ** 2));
+      const framingHeight = Math.min(window.innerHeight, height * 1.35, width * .9 / projectedWidth);
+      const fov = 2 * Math.atan(tangent * height / framingHeight) * 180 / Math.PI;
       return { width, height, scale, fov, cameraZ };
     };
     const resize = () => {
@@ -87,6 +84,9 @@ export function CylinderCarousel() {
       camera?.perspective({ fov: size.fov, aspect: size.width / size.height });
       cylinder?.scale.set(size.scale, size.scale, size.scale);
     };
+    const sceneObserver = new ResizeObserver(resize);
+    sceneObserver.observe(sceneRef.current);
+    window.addEventListener('resize', resize);
     const originals = [...images, './atmosphere/steam-reference.png'].map(src => new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
@@ -216,14 +216,14 @@ export function CylinderCarousel() {
         if (!trigger) return;
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
-      window.addEventListener('resize', resize);
       const animate = () => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);
         if (document.hidden) return;
         if (!renderer || !camera || !scene || !cylinder) return;
         if (Math.abs(camera.fov - cameraPosition.fov) > .001) {
-          camera.perspective({ fov: cameraPosition.fov, aspect: window.innerWidth / window.innerHeight });
+          const size = dimensions();
+          camera.perspective({ fov: cameraPosition.fov, aspect: size.width / size.height });
         }
         camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         camera.lookAt([0, 0, 0]);
@@ -253,6 +253,7 @@ export function CylinderCarousel() {
     return () => {
       disposed = true;
       cancelAnimationFrame(animationFrame);
+      sceneObserver.disconnect();
       window.removeEventListener('resize', resize);
       navigateRef.current = () => {};
       context.revert();
@@ -273,17 +274,19 @@ export function CylinderCarousel() {
       <Loader isLoading={isLoading} className="bg-[#ED0505]" classNameLoader="bg-white" />
       <SaunaAtmosphere />
       <OvenFrame chapter={chapter} onNavigate={navigate} />
-      <div className="sauna-scene" aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
-        {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
-      </div>
-      <div className="sauna-copy">
-        {perspectives.map((perspective, index) => (
-          <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
-            ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
-            <h2>{perspective.title}</h2>
-            {perspective.description && <p className="sauna-perspective-description" lang="ko">{perspective.description}</p>}
-          </div>
-        ))}
+      <div className="sauna-exhibit">
+        <div className="sauna-scene" ref={sceneRef} aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
+          {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
+        </div>
+        <div className="sauna-copy">
+          {perspectives.map((perspective, index) => (
+            <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
+              ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
+              <h2>{perspective.title}</h2>
+              {perspective.description && <p className="sauna-perspective-description" lang="ko">{perspective.description}</p>}
+            </div>
+          ))}
+        </div>
       </div>
       <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>
       {loadError && <div className="sauna-error" role="alert">그래픽을 불러오지 못했습니다.<button onClick={() => window.location.reload()}>다시 불러오기</button></div>}

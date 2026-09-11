@@ -1,8 +1,7 @@
 import './App.css';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
-import { lazy, Suspense, useEffect } from 'react';
-const OvenImageTube = lazy(() => import('./components/pages/image-tube/oven-image-tube'));
+import { useEffect } from 'react';
 import { CylinderCarousel } from './components/pages/variant-1/cylinder-carousel';
 import CinematicSceneShowcase from './components/pages/variant-2/cinematic-scene-showcase';
 
@@ -41,8 +40,7 @@ function App() {
       <BodyClassSetter />
       <main id="main-content" className="" role="main">
         <Routes>
-          <Route path="/" element={<CylinderCarousel />} />
-          <Route path="/tube" element={<Suspense fallback={null}><OvenImageTube /></Suspense>} />
+          <Route path="/*" element={<CylinderCarousel />} />
           <Route path="/variant-2" element={<CinematicSceneShowcase />} />
         </Routes>
       </main>

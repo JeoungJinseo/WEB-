@@ -91,3 +91,10 @@
  .sauna-perspective-0 h2{font-size:32px}
  .sauna-perspective-0 .sauna-perspective-description{font-size:16px;line-height:1.4;margin-top:8px}
 }
+
+/* The cinematic renderer stays mounted while the tube converges into its lens. */
+.tube-journey-active > .sauna-scene{opacity:var(--tube-ring-opacity,0)}
+.tube-journey-active > .sauna-copy{opacity:var(--tube-copy-opacity,0)}
+.tube-bootstrap{position:fixed;inset:0;z-index:3;display:grid;place-items:center}
+.tube-bootstrap img{width:36vw;height:auto}
+@media(max-width:767px){.tube-bootstrap img{width:68vw}}

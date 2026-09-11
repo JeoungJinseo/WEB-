@@ -1,68 +1,123 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
-import { DoubleSide, ExtrudeGeometry, Group, ShaderChunk, SRGBColorSpace, Vector3 } from 'three';
+import { DoubleSide, ExtrudeGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, PlaneGeometry, ShaderChunk, ShaderMaterial, SRGBColorSpace, Vector3 } from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
-import { useNavigate } from 'react-router-dom';
-import { OvenFrame } from '@/components/oven-frame';
-import { SaunaAtmosphere } from '@/components/sauna-atmosphere';
-import { advanceTube, createTubeMotion, scrollTube, tubeArtworks, tubeConfig, type TubeMotion } from '@/lib/image-tube';
+import { advanceTube, createTubeMotion, tubeArtworks, tubeConfig, type TubeMotion } from '@/lib/image-tube';
+import { advanceTransition, panelCoordinates, scrollTransition, transitionEase, type TubeTransition } from '@/lib/tube-transition';
 import '@/oven-sauna.css';
 import './oven-image-tube.css';
 
 type MotionRef = MutableRefObject<TubeMotion>;
 interface HoverInfo { index: number; x: number; y: number }
 
-function ArtworkTube({ motion, onHover, onReady }: { motion: MotionRef; onHover: (value: HoverInfo | null) => void; onReady: () => void }) {
+type TransitionRef = MutableRefObject<TubeTransition>;
+
+function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionRef; transition: TransitionRef; onHover: (value: HoverInfo | null) => void; onReady: () => void }) {
   const textures = useTexture(tubeArtworks.map(art => art.src));
-  const group = useRef<Group>(null);
-  const rows = useRef<(Group | null)[]>([]);
-  const { radius, columns, rowSpacing, tileHeight } = tubeConfig;
-  const positions = useMemo(() => Array.from({ length: tubeConfig.rows * tubeConfig.repeats }, (_, index) => ({
-    y: (index - (tubeConfig.rows * tubeConfig.repeats - 1) / 2) * rowSpacing,
-    baseRow: index % tubeConfig.rows,
-  })), [rowSpacing]);
+  const meshes = useRef<(Mesh | null)[]>([]);
+  const { camera } = useThree();
+  const cards = useMemo(() => Array.from({ length: tubeConfig.rows * tubeConfig.repeats * tubeConfig.columns }, (_, id) => {
+    const row = Math.floor(id / tubeConfig.columns);
+    const col = id % tubeConfig.columns;
+    const baseRow = row % tubeConfig.rows;
+    const panel = (col + baseRow) % tubeConfig.columns;
+    const texture = textures[panel % textures.length];
+    const image = texture.image as HTMLImageElement;
+    const aspect = image.naturalWidth / image.naturalHeight;
+    const columns = panelCoordinates(panel);
+    const geometry = new PlaneGeometry(aspect, 1, columns.length - 1, 1);
+    for (let vertex = 0; vertex < geometry.attributes.uv.count; vertex++) {
+      geometry.attributes.uv.setX(vertex, columns[vertex % columns.length]);
+    }
+    return { row, col, baseRow, panel, texture, aspect, geometry,
+      coordinates: new Float32Array(geometry.attributes.uv.array),
+      gather: { value: 0 }, fit: { value: 1 },
+    };
+  }), [textures]);
+  useEffect(() => () => cards.forEach(card => card.geometry.dispose()), [cards]);
   useEffect(() => {
     textures.forEach(texture => { texture.colorSpace = SRGBColorSpace; texture.needsUpdate = true; });
     onReady();
   }, [textures, onReady]);
   useFrame((_, delta) => {
-    advanceTube(motion.current, delta);
-    if (group.current) group.current.position.y = -motion.current.current;
-    rows.current.forEach((row, index) => {
-      if (row) row.rotation.y = motion.current.angle * (.65 + (index % tubeConfig.rows) / (tubeConfig.rows - 1) * .9);
+    const progress = transition.current.progress;
+    if (progress === 0 && transition.current.target === 0) advanceTube(motion.current, delta);
+    const reduced = transition.current.reduced;
+    const gather = reduced ? 0 : transitionEase(.06, .86, progress);
+    const lens = reduced ? 0 : transitionEase(.12, .9, progress);
+    const endpoint = transition.current.frame;
+    const perspective = camera as PerspectiveCamera;
+    perspective.position.set(0, 0, 6.5 + (endpoint.cameraZ - 6.5) * lens);
+    perspective.fov = 50 + (endpoint.fov - 50) * lens;
+    perspective.updateProjectionMatrix();
+    // Exactly the same off-axis opening lens as the prepared OGL scene.
+    perspective.projectionMatrix.elements[9] = endpoint.shift * lens;
+    perspective.projectionMatrixInverse.copy(perspective.projectionMatrix).invert();
+    const radius = 4 + (2.5 * endpoint.scale - 4) * gather;
+    const height = 1 + (2 * endpoint.scale - 1) * gather;
+    cards.forEach((card, id) => {
+      const mesh = meshes.current[id];
+      if (!mesh) return;
+      const distance = Math.abs(card.row - 7);
+      const opacity = distance === 0 ? 1 : 1 - transitionEase(.48, .8 - Math.min(distance, 6) * .018, progress);
+      mesh.visible = opacity > .001;
+      if (!mesh.visible) return;
+      (mesh.material as MeshBasicMaterial).opacity = opacity;
+      card.gather.value = gather;
+      const width = height * card.aspect * (1 - gather) + (2 * Math.PI * 2.5 * endpoint.scale / 12) * gather;
+      card.fit.value = width / (height * card.aspect);
+      const thetaStart = (card.col + (card.baseRow % 2 ? .5 : 0)) / 12 * Math.PI * 2
+        - motion.current.angle * (.65 + card.baseRow / 4 * .9);
+      const thetaEnd = (card.panel + .5) / 12 * Math.PI * 2 - .5;
+      const turn = Math.atan2(Math.sin(thetaEnd - thetaStart), Math.cos(thetaEnd - thetaStart));
+      const center = thetaStart + turn * gather;
+      const rowY = ((card.row - 7) * tubeConfig.rowSpacing - motion.current.current) * (1 - gather);
+      const positions = card.geometry.attributes.position;
+      for (let vertex = 0; vertex < positions.count; vertex++) {
+        const u = card.coordinates[vertex * 2];
+        const v = card.coordinates[vertex * 2 + 1];
+        const x = (u - .5) * width;
+        const flatX = Math.cos(center) * radius - Math.sin(center) * x;
+        const flatZ = Math.sin(center) * radius + Math.cos(center) * x;
+        // Match the original 64-sided cylinder, including its polygon edges.
+        const angle = center + (u - .5) * width / radius;
+        const segment = (angle + .5) / (Math.PI * 2) * 64;
+        const first = Math.floor(segment);
+        const fraction = segment - first;
+        const a = first / 64 * Math.PI * 2 - .5;
+        const b = (first + 1) / 64 * Math.PI * 2 - .5;
+        const curvedX = radius * (Math.cos(a) + (Math.cos(b) - Math.cos(a)) * fraction);
+        const curvedZ = radius * (Math.sin(a) + (Math.sin(b) - Math.sin(a)) * fraction);
+        positions.setXYZ(vertex, flatX + (curvedX - flatX) * gather, rowY + (v - .5) * height, flatZ + (curvedZ - flatZ) * gather);
+      }
+      positions.needsUpdate = true;
+      card.geometry.computeBoundingSphere();
     });
   });
   const hover = (event: ThreeEvent<PointerEvent>, index: number) => {
+    if (transition.current.target > 0) return;
     event.stopPropagation();
     motion.current.hovered = true;
     onHover({ index, x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
   };
-  return <group ref={group}>
-    {positions.map(({ y, baseRow }, rowIndex) => <group key={rowIndex} position={[0, y, 0]} ref={value => { rows.current[rowIndex] = value; }}>
-      {Array.from({ length: columns }, (_, col) => {
-        const theta = (col + (baseRow % 2 ? .5 : 0)) / columns * Math.PI * 2;
-        const index = (baseRow * columns + col + baseRow) % textures.length;
-        const texture = textures[index];
-        const image = texture.image as HTMLImageElement;
-        const aspect = image.naturalWidth / image.naturalHeight;
-        return <mesh key={col} position={[Math.cos(theta) * radius, 0, Math.sin(theta) * radius]} rotation={[0, -(theta + Math.PI / 2), 0]}
-          onPointerOver={event => hover(event, index)} onPointerMove={event => hover(event, index)}
-          onPointerOut={event => { event.stopPropagation(); motion.current.hovered = false; onHover(null); }}>
-          <planeGeometry args={[tileHeight * aspect, tileHeight]} />
-          <meshBasicMaterial map={texture} side={DoubleSide} toneMapped={false}
-            onBeforeCompile={shader => {
-              // Keep typography readable on both the inner and outer faces.
-              const map = ShaderChunk.map_fragment.replace('vMapUv', 'vec2(gl_FrontFacing ? vMapUv.x : 1.0 - vMapUv.x, vMapUv.y)');
-              shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', map);
-            }} customProgramCacheKey={() => 'oven-tube-readable-sides'} />
-        </mesh>;
-      })}
-    </group>)}
-  </group>;
+  return <group>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled={false}
+    onPointerOver={event => hover(event, card.panel % 6)} onPointerMove={event => hover(event, card.panel % 6)}
+    onPointerOut={event => { event.stopPropagation(); motion.current.hovered = false; onHover(null); }}>
+    <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} transparent
+      onBeforeCompile={shader => {
+        shader.uniforms.uGather = card.gather;
+        shader.uniforms.uFit = card.fit;
+        shader.fragmentShader = 'uniform float uGather; uniform float uFit;\n' + shader.fragmentShader;
+        // Cover-fit in either direction with the same scale on both image axes.
+        const uv = 'vec2(((gl_FrontFacing ? vMapUv.x : 1.0-vMapUv.x)-.5)*min(1.0,uFit)+.5,(vMapUv.y-.5)/max(1.0,uFit)+.5)';
+        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', ShaderChunk.map_fragment.replace('vMapUv', uv));
+        shader.fragmentShader = shader.fragmentShader.replace('#include <colorspace_fragment>', '#include <colorspace_fragment>\ngl_FragColor.rgb *= mix(1.0, .7, uGather);');
+      }} customProgramCacheKey={() => 'oven-tube-convergence'} />
+  </mesh>)}</group>;
 }
 
-function SaunaLogo({ motion, pointer }: { motion: MotionRef; pointer: MutableRefObject<{ x: number; y: number }> }) {
+function SaunaLogo({ motion, pointer, transition }: { motion: MotionRef; pointer: MutableRefObject<{ x: number; y: number }>; transition: TransitionRef }) {
   const svg = useLoader(SVGLoader, '/brand/oven-sauna-logo.svg');
   const logo = useRef<Group>(null);
   const { camera, viewport, size } = useThree();
@@ -82,6 +137,16 @@ function SaunaLogo({ motion, pointer }: { motion: MotionRef; pointer: MutableRef
   const scale = view.width * (size.width < 768 ? .68 : .36);
   useFrame(() => {
     if (!logo.current) return;
+    const fade = 1 - transitionEase(.02, .24, transition.current.progress);
+    logo.current.visible = fade > .001;
+    logo.current.traverse(object => {
+      if (!(object instanceof Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach(material => {
+        if (material instanceof ShaderMaterial) material.uniforms.uFade.value = fade;
+        else { material.transparent = true; material.opacity = fade; }
+      });
+    });
     const amount = motion.current.reduced ? 0 : 1;
     logo.current.rotation.y += (pointer.current.x * .08 * amount - logo.current.rotation.y) * .06;
     logo.current.rotation.x += (-pointer.current.y * .04 * amount - logo.current.rotation.x) * .06;
@@ -89,9 +154,9 @@ function SaunaLogo({ motion, pointer }: { motion: MotionRef; pointer: MutableRef
   return <group ref={logo} position={[0, 0, depth]} scale={scale}>
     <mesh position={[0, 0, -.09]}>
       <planeGeometry args={[1.65, .8]} />
-      <shaderMaterial transparent depthWrite={false}
+      <shaderMaterial transparent depthWrite={false} uniforms={{ uFade: { value: 1 } }}
         vertexShader={`varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`}
-        fragmentShader={`varying vec2 vUv; void main(){float d=length((vUv-.5)*2.0); float alpha=(1.0-smoothstep(.08,1.0,d))*.72; gl_FragColor=vec4(0.015,0.0,0.0,alpha);}`} />
+        fragmentShader={`uniform float uFade; varying vec2 vUv; void main(){float d=length((vUv-.5)*2.0); float alpha=(1.0-smoothstep(.08,1.0,d))*.72; gl_FragColor=vec4(0.015,0.0,0.0,alpha*uFade);}`} />
     </mesh>
     <mesh geometry={geometry}>
       <meshBasicMaterial attach="material-0" color="#ED0505" toneMapped={false} />
@@ -114,7 +179,9 @@ function GalleryFallback({ onReady }: { onReady: () => void }) {
   </div>;
 }
 
-export default function OvenImageTube() {
+export default function OvenImageTube({ transition, onProgress, onComplete }: {
+  transition: TransitionRef; onProgress: (progress: number) => void; onComplete: () => void;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const motion = useRef(createTubeMotion());
   const pointer = useRef({ x: 0, y: 0 });
@@ -125,7 +192,7 @@ export default function OvenImageTube() {
   const [unavailable, setUnavailable] = useState(() => !('WebGL2RenderingContext' in window));
   const [paused, setPaused] = useState(false);
   const [hidden, setHidden] = useState(document.hidden);
-  const navigate = useNavigate();
+
   const onReady = useCallback(() => setReady(true), []);
   const onFallback = useCallback(() => { setReady(true); setUnavailable(true); }, []);
   useEffect(() => {
@@ -133,6 +200,32 @@ export default function OvenImageTube() {
     const timeout = window.setTimeout(onFallback, 12000);
     return () => window.clearTimeout(timeout);
   }, [ready, onFallback]);
+  const move = useCallback((pixels: number) => {
+    if (!ready) return;
+    scrollTransition(transition.current, pixels, window.innerHeight);
+    setHovered(null);
+    motion.current.hovered = false;
+  }, [ready, transition]);
+  useEffect(() => {
+    let frame = 0;
+    let previous = performance.now();
+    let finished = false;
+    const animate = (time: number) => {
+      const elapsed = (time - previous) / 1000;
+      previous = time;
+      if (!document.hidden && ready) {
+        advanceTransition(transition.current, elapsed, motion.current.reduced);
+        const progress = transition.current.progress;
+        onProgress(progress);
+        root.current?.style.setProperty('--tube-opacity', String(1 - (transition.current.reduced ? transitionEase(.15, .4, progress) : transitionEase(.9, 1, progress))));
+        root.current?.style.setProperty('--tube-ui-opacity', String(1 - transitionEase(.02, .22, progress)));
+        if (progress === 1 && !finished) { finished = true; onComplete(); return; }
+      }
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [ready, transition, onProgress, onComplete]);
   const onHover = useCallback((value: HoverInfo | null) => {
     if (drag.current) return;
     if (value && tooltip.current) {
@@ -144,17 +237,17 @@ export default function OvenImageTube() {
   useEffect(() => {
     document.title = 'OVEN SAUNA — Image Tube';
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const syncMotion = () => { motion.current.reduced = reduced.matches; };
+    const syncMotion = () => { motion.current.reduced = reduced.matches; transition.current.reduced = reduced.matches; };
     const syncVisibility = () => setHidden(document.hidden);
     syncMotion();
     reduced.addEventListener('change', syncMotion);
     document.addEventListener('visibilitychange', syncVisibility);
-    const surface = root.current!;
+    const surface = window;
     const wheel = (event: WheelEvent) => {
       if (event.ctrlKey || unavailable) return;
       event.preventDefault();
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
-      scrollTube(motion.current, event.deltaY * unit);
+      move(event.deltaY * unit);
       setHovered(null);
       motion.current.hovered = false;
     };
@@ -164,29 +257,23 @@ export default function OvenImageTube() {
       document.removeEventListener('visibilitychange', syncVisibility);
       surface.removeEventListener('wheel', wheel);
     };
-  }, [unavailable]);
+  }, [unavailable, move]);
   const pause = () => {
     const next = !paused;
     setPaused(next);
     motion.current.paused = next;
     if (next) motion.current.velocity = 0;
   };
-  const openSection = (progress: number) => {
-    if (progress === .75) { motion.current.target = 0; return; }
-    navigate('/', { state: { scene: progress } });
-  };
-  return <div className={`oven-page sauna-tube${unavailable ? ' tube-static' : ''}`} ref={root}>
-    <SaunaAtmosphere />
+  return <div className={`sauna-tube tube-embedded${unavailable ? ' tube-static' : ''}`} ref={root}>
     <div className="tube-chrome-shade" aria-hidden="true" />
-    <OvenFrame chapter={2} onNavigate={openSection} />
     <h1 className="tube-sr-only">OVEN SAUNA — Graphic archive</h1>
     <div className="tube-stage" role="region" aria-label="OVEN SAUNA 그래픽 튜브. 스크롤 또는 위아래 방향키로 이동합니다." tabIndex={0}
       onKeyDown={event => {
         if (unavailable) return;
         if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', ' '].includes(event.key)) event.preventDefault();
-        if (event.key === 'ArrowDown' || event.key === 'PageDown') scrollTube(motion.current, event.key === 'PageDown' ? 300 : 120);
-        if (event.key === 'ArrowUp' || event.key === 'PageUp') scrollTube(motion.current, event.key === 'PageUp' ? -300 : -120);
-        if (event.key === 'Home') motion.current.target = 0;
+        if (event.key === 'ArrowDown' || event.key === 'PageDown') move(event.key === 'PageDown' ? 300 : 120);
+        if (event.key === 'ArrowUp' || event.key === 'PageUp') move(event.key === 'PageUp' ? -300 : -120);
+        if (event.key === 'Home') transition.current.target = 0;
         if (event.key === ' ') pause();
       }}
       onPointerDown={event => {
@@ -199,8 +286,8 @@ export default function OvenImageTube() {
       onPointerMove={event => {
         pointer.current = { x: event.clientX / window.innerWidth * 2 - 1, y: event.clientY / window.innerHeight * 2 - 1 };
         if (drag.current?.id !== event.pointerId) return;
-        scrollTube(motion.current, (drag.current.y - event.clientY) * 2);
-        motion.current.angle += (event.clientX - drag.current.x) * .003;
+        move((drag.current.y - event.clientY) * 2);
+        if (transition.current.target === 0) motion.current.angle += (event.clientX - drag.current.x) * .003;
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
       }}
       onPointerUp={event => {
@@ -216,8 +303,8 @@ export default function OvenImageTube() {
           <ambientLight intensity={1.4} />
           <directionalLight position={[3, 4, 6]} intensity={2} />
           <Suspense fallback={null}>
-            <ArtworkTube motion={motion} onHover={onHover} onReady={onReady} />
-            <SaunaLogo motion={motion} pointer={pointer} />
+            <ArtworkTube motion={motion} transition={transition} onHover={onHover} onReady={onReady} />
+            <SaunaLogo motion={motion} pointer={pointer} transition={transition} />
           </Suspense>
         </Canvas>
       </TubeBoundary>}
@@ -227,7 +314,8 @@ export default function OvenImageTube() {
       <span>{String(hovered.index + 1).padStart(2, '0')} / 06</span><strong>{tubeArtworks[hovered.index].title}</strong>
     </div>}
     <div className="tube-bottom-shade" aria-hidden="true" />
-    {!unavailable && <div className="tube-instruction"><span aria-hidden="true">↕</span><p>스크롤해서 그래픽을 살펴보세요.</p></div>}
+    {!unavailable && <div className="tube-instruction"><span aria-hidden="true">↓</span><p>스크롤하면 OVEN SAUNA의 이야기가 시작됩니다.</p></div>}
+    {unavailable && <button className="tube-continue" onClick={onComplete}>OVEN SAUNA 이야기 보기 ↓</button>}
     {!unavailable && <button className="tube-pause" onClick={pause} aria-pressed={paused} aria-label={paused ? '자동 회전 재생' : '자동 회전 일시정지'}>{paused ? 'Play' : 'Pause'}</button>}
   </div>;
 }

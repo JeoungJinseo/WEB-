@@ -31,3 +31,10 @@
 @media(max-height:560px){.tube-instruction{bottom:22px}.oven-page .tube-pause{bottom:17px}.tube-bottom-shade{height:90px}}
 
 .tube-static .tube-stage{touch-action:pan-y;cursor:auto}
+
+.tube-embedded{position:fixed;inset:0;z-index:3;pointer-events:none}
+.tube-embedded .tube-stage{pointer-events:auto;opacity:var(--tube-opacity,1)}
+.tube-embedded .tube-chrome-shade,.tube-embedded .tube-bottom-shade,.tube-embedded .tube-instruction,.tube-embedded .tube-pause{opacity:var(--tube-ui-opacity,1)}
+.tube-embedded .tube-pause{pointer-events:auto}
+.oven-page .tube-continue{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:61;pointer-events:auto;color:#ddd;font:400 16px Archivo,Pretendard,sans-serif}
+@media(max-width:767px){.tube-embedded .tube-instruction p{font-size:12px}}

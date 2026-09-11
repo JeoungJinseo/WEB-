@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { createTubeTransition, transitionEase } from '@/lib/tube-transition';
+const OvenImageTube = lazy(() => import('../image-tube/oven-image-tube'));
 import { Renderer, Camera, Transform, Texture, Program, Mesh } from 'ogl';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -24,6 +26,24 @@ CustomEase.create('saunaLinear', '0.4, 0, 0.6, 1');
 
 export function CylinderCarousel() {
   const location = useLocation();
+  const routeNavigate = useNavigate();
+  const [tubeIntro, setTubeIntro] = useState(location.pathname === '/tube');
+  const introActive = useRef(tubeIntro);
+  const transition = useRef(createTubeTransition());
+  const pendingScene = useRef<number | null>(null);
+  const resetTube = useRef<() => void>(() => {});
+  const releaseScroll = useRef<() => void>(() => {});
+  const completeTube = useCallback(() => {
+    introActive.current = false;
+    releaseScroll.current();
+    setTubeIntro(false);
+    document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
+    routeNavigate('/', { replace: true, state: null });
+  }, [routeNavigate]);
+  const transitionProgress = useCallback((progress: number) => {
+    rootRef.current?.style.setProperty('--tube-ring-opacity', String(transition.current.reduced ? transitionEase(.15, .4, progress) : progress >= .9 ? 1 : 0));
+    rootRef.current?.style.setProperty('--tube-copy-opacity', String(transition.current.reduced ? transitionEase(.35, .55, progress) : transitionEase(.82, .98, progress)));
+  }, []);
   const entryProgress = useRef(Math.max(0, Math.min(1, Number(location.state?.scene) || 0)));
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -42,6 +62,7 @@ export function CylinderCarousel() {
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
     let disposed = false;
     let animationFrame = 0;
+    let fontsReady = false;
     let timeline: gsap.core.Timeline | undefined;
     let renderer: Renderer | undefined;
     let texture: Texture | undefined;
@@ -66,6 +87,8 @@ export function CylinderCarousel() {
       smoothTouch: reducedMotion ? 0 : .1,
       effects: false,
     });
+    smoother.paused(introActive.current);
+    releaseScroll.current = () => { smoother.paused(false); ScrollTrigger.refresh(); };
     const context = gsap.context(() => {}, rootRef.current);
 
     const dimensions = () => {
@@ -109,6 +132,8 @@ export function CylinderCarousel() {
         copyTop: groupTop + ringHeight + gap,
         centeredCopyTop: Math.max(size.height / 2 - captionHeight / 2, top),
       };
+      if (renderer && camera && scene && cylinder) transition.current.ready = false;
+      transition.current.frame = { fov: opening.fov, shift: opening.shift, scale: size.scale, cameraZ: size.cameraZ };
       rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * openingBlend.value}px`);
     };
     const captionObserver = new ResizeObserver(resize);
@@ -245,6 +270,14 @@ export function CylinderCarousel() {
         if (!trigger) return;
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
+      resetTube.current = () => {
+        smoother.scrollTo(0, false);
+        ScrollTrigger.update();
+        ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress(1));
+        timeline?.progress(0);
+        smoother.paused(true);
+        resize();
+      };
       resize();
       if (entryProgress.current) {
         const trigger = timeline?.scrollTrigger;
@@ -256,6 +289,7 @@ export function CylinderCarousel() {
         animationFrame = requestAnimationFrame(animate);
         if (document.hidden) return;
         if (!renderer || !camera || !scene || !cylinder) return;
+        if (introActive.current && transition.current.ready && transition.current.progress < (transition.current.reduced ? .1 : .88)) return;
         const blend = openingBlend.value;
         const fov = cameraPosition.fov + (opening.fov - cameraPosition.fov) * blend;
         camera.perspective({ fov, aspect: window.innerWidth / window.innerHeight });
@@ -278,12 +312,14 @@ export function CylinderCarousel() {
           uniforms.uBaseAngle.value = data.baseAngle;
         });
         renderer.render({ scene, camera });
+        transition.current.ready = fontsReady;
       };
       animationFrame = requestAnimationFrame(animate);
       setIsLoading(false);
-      document.fonts.ready.then(() => { if (!disposed) { resize(); ScrollTrigger.refresh(); } });
+      if (!renderer || !camera || !scene || !cylinder) transition.current.ready = true;
+      document.fonts.ready.then(() => { if (!disposed) { fontsReady = true; resize(); ScrollTrigger.refresh(); } });
     }).catch(() => {
-      if (!disposed) { setIsLoading(false); setLoadError(true); }
+      if (!disposed) { setIsLoading(false); setLoadError(true); transition.current.ready = true; }
     });
 
     return () => {
@@ -295,6 +331,9 @@ export function CylinderCarousel() {
       navigateRef.current = () => {};
       context.revert();
       smoother.kill();
+      releaseScroll.current = () => {};
+      resetTube.current = () => {};
+      transition.current.ready = false;
       particles.forEach(particle => { particle.geometry.remove(); particle.program.remove(); });
       cylinder?.geometry.remove();
       cylinder?.program.remove();
@@ -303,18 +342,43 @@ export function CylinderCarousel() {
     };
   }, []);
 
-  const navigate = (progress: number) => navigateRef.current(progress);
+  useEffect(() => {
+    if (location.pathname !== '/tube' || introActive.current) return;
+    introActive.current = true;
+    transition.current.target = 0;
+    transition.current.progress = 0;
+    transitionProgress(0);
+    resetTube.current();
+    setTubeIntro(true);
+  }, [location.pathname, transitionProgress]);
+
+  useEffect(() => {
+    if (!tubeIntro && pendingScene.current !== null) {
+      navigateRef.current(pendingScene.current);
+      pendingScene.current = null;
+    }
+  }, [tubeIntro]);
+
+  const navigate = (progress: number) => {
+    if (introActive.current) {
+      if (!transition.current.ready) return;
+      pendingScene.current = progress;
+      completeTube();
+      return;
+    }
+    navigateRef.current(progress);
+  };
   const nextScene = () => navigate(chapter === 0 ? .45 : chapter === 1 ? .75 : chapter === 2 ? 1 : 0);
 
   return (
-    <div className="oven-page" ref={rootRef}>
-      <Loader isLoading={isLoading} className="bg-[#ED0505]" classNameLoader="bg-white" />
+    <div className={`oven-page${tubeIntro ? ' tube-journey-active' : ''}`} ref={rootRef}>
+      <Loader isLoading={isLoading && !tubeIntro} className="bg-[#ED0505]" classNameLoader="bg-white" />
       <SaunaAtmosphere />
       <OvenFrame chapter={chapter} onNavigate={navigate} />
       <div className="sauna-scene" aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
         {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
       </div>
-      <div className="sauna-copy">
+      <div className="sauna-copy" aria-hidden={tubeIntro}>
         {perspectives.map((perspective, index) => (
           <div className={`sauna-perspective sauna-perspective-${index}`} key={perspective.title}
             ref={element => { textRefs.current[index] = element; }} aria-hidden={chapter !== index}>
@@ -323,7 +387,10 @@ export function CylinderCarousel() {
           </div>
         ))}
       </div>
-      <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>
+      {!tubeIntro && <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>}
+      {tubeIntro && <Suspense fallback={<div className="tube-bootstrap"><img src="/brand/oven-sauna-logo.svg" alt="OVEN SAUNA" /></div>}>
+        <OvenImageTube transition={transition} onProgress={transitionProgress} onComplete={completeTube} />
+      </Suspense>}
       {loadError && <div className="sauna-error" role="alert">그래픽을 불러오지 못했습니다.<button onClick={() => window.location.reload()}>다시 불러오기</button></div>}
       <div ref={wrapperRef} id="smooth-wrapper"><div ref={contentRef} id="smooth-content"><div ref={containerRef} style={{ height: '500svh' }} /></div></div>
     </div>

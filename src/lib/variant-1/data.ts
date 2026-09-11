@@ -19,26 +19,26 @@ export const imageRepeat = 2;
 export const perspectives: Perspective[] = [
   {
     eyebrow: 'BRAND STRATEGIES',
-    title: 'OVEN SAUNA GRAPHICS',
-    description: '오븐의 열기와 사우나의 감각을 여섯 장의 그래픽으로 담았습니다.\n스크롤하며 스티커부터 포스터, 수건까지 이어지는 디자인을 살펴보세요.',
+    title: 'HEAT AS IDENTITY',
+    description: '오븐과 사우나가 공통으로 가지고 있는 ‘열’이라는 요소에서 출발했습니다.\n굽네의 오븐 이미지를 사우나의 분위기와 연결해 OVEN SAUNA만의 인상을 만들었습니다.',
     position: 'center',
   },
   {
     eyebrow: 'GRAPHIC LANGUAGE',
-    title: 'SHAPED BY HEAT',
-    description: '열기에 녹아 흐르는 듯한 레터링에 거친 표면의 질감을 더했습니다.\n유연한 곡선과 단단한 표지판의 대비로 생생한 에너지를 표현합니다.',
+    title: 'MELTED FORM',
+    description: '열에 녹아 흐르는 모습을 떠올리며 레터링과 그래픽 형태를 만들었습니다.\n둥글고 늘어지는 형태들은 뜨겁고 유쾌하며 힙한 분위기를 표현합니다.',
     position: 'center',
   },
   {
     eyebrow: 'GRAPHIC SYSTEM',
-    title: 'ONE IDENTITY',
-    description: '스티커, 티켓, 표지판, 포스터와 수건까지.\n서로 다른 재질 위에 같은 로고와 레드를 반복해 하나의 인상으로 연결합니다.',
+    title: 'VISUAL FLOW',
+    description: 'OVEN SAUNA의 그래픽은 하나의 비주얼 톤으로 연결되어 있습니다.\n블랙과 레드의 강렬한 대비를 통해 OVEN SAUNA만의 브랜드 톤을 만들어냅니다.',
     position: 'center',
   },
   {
     eyebrow: 'BRAND EXPERIENCE',
-    title: 'FEEL THE HEAT',
-    description: '김 서린 유리와 촘촘한 패브릭, 빛바랜 금속의 표면.\n눈으로 보는 이미지에 촉감과 온도를 더해 사우나의 분위기를 전달합니다.',
+    title: 'SWEAT OUT, GATHER IN',
+    description: 'SWEAT OUT, GATHER IN은 OVEN SAUNA 그래픽의 핵심 메시지입니다.\n땀을 빼고 함께 모이는 순간, OVEN SAUNA의 뜨거운 에너지를 느껴보세요.',
     position: 'bottom',
   },
 ];

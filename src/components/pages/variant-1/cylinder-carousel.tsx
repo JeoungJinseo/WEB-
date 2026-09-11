@@ -3,6 +3,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createTubeTransition, transitionEase } from '@/lib/tube-transition';
+import { advanceTube, createTubeMotion, tubeRingSpeedFactor } from '@/lib/image-tube';
 const OvenImageTube = lazy(() => import('../image-tube/oven-image-tube'));
 import { Renderer, Camera, Transform, Texture, Program, Mesh } from 'ogl';
 import gsap from 'gsap';
@@ -81,11 +82,11 @@ export function CylinderCarousel() {
     // angle reached while waiting, and idle rotation does not trigger steam.
     const scrollRotation = { y: .5 };
     let previousRotation = .5;
-    let idleAngle = 0;
-    let idleSpeed = 0;
+    const idleMotion = transition.current.motion;
     let previousFrame: number | undefined;
     let currentChapter = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    idleMotion.reduced = reducedMotion;
     const smoother = ScrollSmoother.create({
       wrapper: wrapperRef.current,
       content: contentRef.current,
@@ -281,8 +282,7 @@ export function CylinderCarousel() {
         ScrollTrigger.update();
         ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress(1));
         timeline?.progress(0);
-        idleAngle = 0;
-        idleSpeed = 0;
+        Object.assign(idleMotion, createTubeMotion(), { reduced: reducedMotion });
         previousRotation = scrollRotation.y;
         smoother.paused(true);
         resize();
@@ -299,6 +299,12 @@ export function CylinderCarousel() {
         const delta = previousFrame === undefined ? 0 : Math.min(.05, Math.max(0, (time - previousFrame) / 1000));
         previousFrame = time;
         if (document.hidden) return;
+        // This clock owns rotation for both renderers, including while the OGL
+        // canvas is hidden. No restart or acceleration ramp at the handoff.
+        if (fontsReady) {
+          const weight = introActive.current ? 1 : 1 - transitionEase(0, .025, timeline?.progress() ?? 0);
+          advanceTube(idleMotion, delta * weight);
+        }
         if (!renderer || !camera || !scene || !cylinder) return;
         if (introActive.current && transition.current.ready && transition.current.progress < (transition.current.reduced ? .1 : .88)) return;
         const blend = openingBlend.value;
@@ -308,14 +314,7 @@ export function CylinderCarousel() {
         rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * blend}px`);
         camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         camera.lookAt([0, 0, 0]);
-        if (!introActive.current && fontsReady && !reducedMotion) {
-          // About one turn per 70 seconds. Ease out the extra drift as the
-          // opening scroll takes over, retaining its accumulated angle.
-          const targetSpeed = .09 * (1 - transitionEase(0, .025, timeline?.progress() ?? 0));
-          idleSpeed += (targetSpeed - idleSpeed) * (1 - Math.exp(-4 * delta));
-          idleAngle += idleSpeed * delta;
-        }
-        cylinder.rotation.y = scrollRotation.y + idleAngle;
+        cylinder.rotation.y = scrollRotation.y + idleMotion.angle * tubeRingSpeedFactor;
         const velocity = scrollRotation.y - previousRotation;
         previousRotation = scrollRotation.y;
         // Steam responds only to the original scroll rotation.

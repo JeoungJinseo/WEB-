@@ -1,5 +1,8 @@
 // Motion and cylindrical layout adapted from matdn/helmet (Codrops, MIT).
 export const tubeConfig = { radius: 4, rows: 5, columns: 12, repeats: 3, rowSpacing: 2.7, tileHeight: 1, baseSpeed: .25 };
+// The middle row becomes the final cylinder; retain its angular speed.
+export const tubeRowSpeed = (row: number) => .65 + (row % tubeConfig.rows) / 4 * .9;
+export const tubeRingSpeedFactor = tubeRowSpeed(Math.floor(tubeConfig.rows * tubeConfig.repeats / 2));
 export const tubeArtworks = [
   { src: '/oven-sauna/01-sticker.png', title: 'STICKER' },
   { src: '/oven-sauna/02-ticket.png', title: 'TICKET' },

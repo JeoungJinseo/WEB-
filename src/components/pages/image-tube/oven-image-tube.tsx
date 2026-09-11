@@ -3,7 +3,7 @@ import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from '@react-t
 import { useTexture } from '@react-three/drei';
 import { BufferAttribute, DoubleSide, DynamicDrawUsage, ExtrudeGeometry, Group, Mesh, PerspectiveCamera, PlaneGeometry, ShaderChunk, ShaderMaterial, Sphere, SRGBColorSpace, Vector3 } from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
-import { advanceTube, createTubeMotion, tubeArtworks, tubeConfig, type TubeMotion } from '@/lib/image-tube';
+import { tubeArtworks, tubeConfig, tubeRingSpeedFactor, tubeRowSpeed, type TubeMotion } from '@/lib/image-tube';
 import { advanceTransition, panelCoordinates, scrollTransition, transitionEase, type TubeTransition } from '@/lib/tube-transition';
 import '@/oven-sauna.css';
 import './oven-image-tube.css';
@@ -16,6 +16,7 @@ type TransitionRef = MutableRefObject<TubeTransition>;
 function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionRef; transition: TransitionRef; onHover: (value: HoverInfo | null) => void; onReady: () => void }) {
   const textures = useTexture(tubeArtworks.map(art => art.src));
   const meshes = useRef<(Mesh | null)[]>([]);
+  const rotatingGroup = useRef<Group>(null);
   const { camera } = useThree();
   const cards = useMemo(() => Array.from({ length: tubeConfig.rows * tubeConfig.repeats * tubeConfig.columns }, (_, id) => {
     const row = Math.floor(id / tubeConfig.columns);
@@ -42,10 +43,11 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     textures.forEach(texture => { texture.colorSpace = SRGBColorSpace; texture.needsUpdate = true; });
     onReady();
   }, [textures, onReady]);
-  useFrame((_, delta) => {
+  useFrame(() => {
     const progress = transition.current.progress;
-    // Carry the idle rotation into the gather, then gently settle it.
-    advanceTube(motion.current, delta * (1 - transitionEase(0, .32, progress)));
+    // One shared phase runs through gathering and the OGL handoff. Only the
+    // rows' relative angles converge; their common rotation never settles.
+    if (rotatingGroup.current) rotatingGroup.current.rotation.y = motion.current.angle * tubeRingSpeedFactor;
     const reduced = transition.current.reduced;
     const gather = reduced ? 0 : transitionEase(.02, .9, progress);
     const lens = reduced ? 0 : transitionEase(.04, .9, progress);
@@ -79,10 +81,10 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
       const width = (outerHeight * card.aspect * (1 - gather) + (2 * Math.PI * 2.5 * endpoint.scale / 12) * gather) * layerScale;
       card.fit.value = width / (height * card.aspect);
       const thetaStart = (card.col + (card.baseRow % 2 ? .5 : 0)) / 12 * Math.PI * 2
-        - motion.current.angle * (.65 + card.baseRow / 4 * .9);
+        - motion.current.angle * (tubeRowSpeed(card.baseRow) - tubeRingSpeedFactor);
       const thetaEnd = (card.panel + .5) / 12 * Math.PI * 2 - .5;
       if (progress === 0 && transition.current.target === 0) card.endAngle = null;
-      // Keep one continuous angular path while the starting rotation winds down.
+      // Keep one continuous relative angular path while the whole group rotates.
       // Recomputing the shortest angle can otherwise jump at the +/- PI seam.
       card.endAngle ??= thetaStart + Math.atan2(Math.sin(thetaEnd - thetaStart), Math.cos(thetaEnd - thetaStart));
       const center = thetaStart + (card.endAngle - thetaStart) * alignment;
@@ -116,7 +118,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     event.stopPropagation();
     onHover({ index, x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
   };
-  return <group>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled
+  return <group ref={rotatingGroup}>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled
     onPointerOver={event => hover(event, card.panel % 6)} onPointerMove={event => hover(event, card.panel % 6)}
     onPointerOut={event => { event.stopPropagation(); onHover(null); }}>
     <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} depthWrite depthTest
@@ -198,7 +200,7 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
   transition: TransitionRef; onProgress: (progress: number) => void; onComplete: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const motion = useRef(createTubeMotion());
+  const motion = useMemo<MotionRef>(() => ({ current: transition.current.motion }), [transition]);
   const pointer = useRef({ x: 0, y: 0 });
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const [hovered, setHovered] = useState<HoverInfo | null>(null);

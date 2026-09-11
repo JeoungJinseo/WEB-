@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Renderer, Camera, Transform, Texture, Program, Mesh } from 'ogl';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -22,6 +23,8 @@ CustomEase.create('saunaFlow', '0.33, 0, 0.2, 1');
 CustomEase.create('saunaLinear', '0.4, 0, 0.6, 1');
 
 export function CylinderCarousel() {
+  const location = useLocation();
+  const entryProgress = useRef(Math.max(0, Math.min(1, Number(location.state?.scene) || 0)));
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
@@ -243,6 +246,11 @@ export function CylinderCarousel() {
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
       resize();
+      if (entryProgress.current) {
+        const trigger = timeline?.scrollTrigger;
+        if (trigger) smoother.scrollTo(trigger.start + entryProgress.current * (trigger.end - trigger.start), false);
+        entryProgress.current = 0;
+      }
       const animate = () => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);

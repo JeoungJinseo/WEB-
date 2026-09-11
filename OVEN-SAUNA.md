@@ -49,3 +49,13 @@ npm run dev
 - 폰트는 로컬 파일로 제공하며 Archivo와 Pretendard의 라이선스 파일을 `public/brand/`에 포함했습니다.
 
 기반 코드: [JosephASG / codrops-cinematic-scroll-animations](https://github.com/JosephASG/codrops-cinematic-scroll-animations). 원본 설명과 크레딧은 `README.md`를 참고하세요.
+
+## Image Tube 갤러리
+
+- 기존 시네마틱 페이지는 `/`에 그대로 보존하며 새 갤러리는 `/#/tube`에서 열립니다.
+- [Matis Dené의 Codrops Image Tube](https://github.com/matdn/helmet/blob/main/src/components/FiberScene.tsx)를 참고해 반경 4, 한 줄 12개, 5줄을 세 번 반복하는 원통 배치를 사용합니다. 스크롤의 관성, 행마다 다른 회전 속도, 수직 무한 반복과 호버 시 35% 감속을 적용했습니다.
+- 여섯 개의 제공 그래픽을 각 이미지의 실제 가로세로 비율로 표시합니다. 원통의 안팎에서 글자가 뒤집히지 않도록 뒷면 UV를 보정했습니다.
+- 중앙은 사용자가 제공한 SVG를 원본 형태 그대로 얕게 돌출한 OVEN SAUNA 로고입니다. 로고는 `#ED0505`를 사용하고 포인터에 따라 작은 각도로 움직입니다.
+- 기존 상단·하단 패널, 로컬 폰트, 붉은 배경, 매우 옅고 느린 수증기를 공유합니다.
+- 휠, 터치/마우스 드래그, 방향키·Page Up/Down으로 탐색할 수 있습니다. Pause로 자동 회전을 멈추며, 동작 줄이기 설정에서는 자동 회전이 없습니다. WebGL을 사용할 수 없으면 여섯 그래픽의 평면 목록을 제공합니다.
+- 새 갤러리의 HOME과 ABOUT은 기존 시네마틱 페이지로 연결됩니다. PROJECT는 튜브의 수직 위치를 처음으로 되돌립니다.

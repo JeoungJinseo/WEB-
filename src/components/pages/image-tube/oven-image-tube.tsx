@@ -1,7 +1,7 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
-import { DoubleSide, ExtrudeGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, PlaneGeometry, ShaderChunk, ShaderMaterial, SRGBColorSpace, Vector3 } from 'three';
+import { BufferAttribute, DoubleSide, DynamicDrawUsage, ExtrudeGeometry, Group, Mesh, PerspectiveCamera, PlaneGeometry, ShaderChunk, ShaderMaterial, Sphere, SRGBColorSpace, Vector3 } from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { advanceTube, createTubeMotion, tubeArtworks, tubeConfig, type TubeMotion } from '@/lib/image-tube';
 import { advanceTransition, panelCoordinates, scrollTransition, transitionEase, type TubeTransition } from '@/lib/tube-transition';
@@ -27,6 +27,8 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     const aspect = image.naturalWidth / image.naturalHeight;
     const columns = panelCoordinates(panel);
     const geometry = new PlaneGeometry(aspect, 1, columns.length - 1, 1);
+    (geometry.attributes.position as BufferAttribute).setUsage(DynamicDrawUsage);
+    geometry.boundingSphere = new Sphere();
     for (let vertex = 0; vertex < geometry.attributes.uv.count; vertex++) {
       geometry.attributes.uv.setX(vertex, columns[vertex % columns.length]);
     }
@@ -47,6 +49,9 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     const reduced = transition.current.reduced;
     const gather = reduced ? 0 : transitionEase(.02, .9, progress);
     const lens = reduced ? 0 : transitionEase(.04, .9, progress);
+    // Assemble intact cards first; only then finish closing the curved surface.
+    const collapse = reduced ? 0 : transitionEase(.02, .62, progress);
+    const alignment = reduced ? 0 : transitionEase(.02, .65, progress);
     const endpoint = transition.current.frame;
     const perspective = camera as PerspectiveCamera;
     perspective.position.set(0, 0, 6.5 + (endpoint.cameraZ - 6.5) * lens);
@@ -55,18 +60,23 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     // Exactly the same off-axis opening lens as the prepared OGL scene.
     perspective.projectionMatrix.elements[9] = endpoint.shift * lens;
     perspective.projectionMatrixInverse.copy(perspective.projectionMatrix).invert();
-    const radius = 4 + (2.5 * endpoint.scale - 4) * gather;
-    const height = 1 + (2 * endpoint.scale - 1) * gather;
+    const outerRadius = 4 + (2.5 * endpoint.scale - 4) * gather;
+    const outerHeight = 1 + (2 * endpoint.scale - 1) * gather;
+    const recess = transitionEase(.015, .38, progress);
     cards.forEach((card, id) => {
       const mesh = meshes.current[id];
       if (!mesh) return;
       const distance = Math.abs(card.row - 7);
-      const opacity = distance === 0 ? 1 : 1 - transitionEase(.48, .8 - Math.min(distance, 6) * .018, progress);
-      mesh.visible = opacity > .001;
+      // Opaque cards nest at distinct depths. Never fade intersecting surfaces:
+      // transparent rows at the same radius create the sliced/ghosted image artifact.
+      mesh.visible = distance === 0 || progress < .91;
       if (!mesh.visible) return;
-      (mesh.material as MeshBasicMaterial).opacity = opacity;
+      const layer = distance === 0 ? 0 : distance * 2 - (card.row < 7 ? 1 : 0);
+      const radius = outerRadius * (1 - layer * .022 * recess);
+      const layerScale = radius / outerRadius;
+      const height = outerHeight * layerScale;
       card.gather.value = gather;
-      const width = height * card.aspect * (1 - gather) + (2 * Math.PI * 2.5 * endpoint.scale / 12) * gather;
+      const width = (outerHeight * card.aspect * (1 - gather) + (2 * Math.PI * 2.5 * endpoint.scale / 12) * gather) * layerScale;
       card.fit.value = width / (height * card.aspect);
       const thetaStart = (card.col + (card.baseRow % 2 ? .5 : 0)) / 12 * Math.PI * 2
         - motion.current.angle * (.65 + card.baseRow / 4 * .9);
@@ -75,8 +85,8 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
       // Keep one continuous angular path while the starting rotation winds down.
       // Recomputing the shortest angle can otherwise jump at the +/- PI seam.
       card.endAngle ??= thetaStart + Math.atan2(Math.sin(thetaEnd - thetaStart), Math.cos(thetaEnd - thetaStart));
-      const center = thetaStart + (card.endAngle - thetaStart) * gather;
-      const rowY = ((card.row - 7) * tubeConfig.rowSpacing - motion.current.current) * (1 - gather);
+      const center = thetaStart + (card.endAngle - thetaStart) * alignment;
+      const rowY = ((card.row - 7) * tubeConfig.rowSpacing - motion.current.current) * (1 - collapse);
       const positions = card.geometry.attributes.position;
       for (let vertex = 0; vertex < positions.count; vertex++) {
         const u = card.coordinates[vertex * 2];
@@ -96,7 +106,9 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
         positions.setXYZ(vertex, flatX + (curvedX - flatX) * gather, rowY + (v - .5) * height, flatZ + (curvedZ - flatZ) * gather);
       }
       positions.needsUpdate = true;
-      card.geometry.computeBoundingSphere();
+      // Keep culling correct without rescanning every vertex of every card.
+      card.geometry.boundingSphere!.center.set(Math.cos(center) * radius, rowY, Math.sin(center) * radius);
+      card.geometry.boundingSphere!.radius = Math.hypot(width, height) * .5 + .08;
     });
   });
   const hover = (event: ThreeEvent<PointerEvent>, index: number) => {
@@ -107,7 +119,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
   return <group>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled
     onPointerOver={event => hover(event, card.panel % 6)} onPointerMove={event => hover(event, card.panel % 6)}
     onPointerOut={event => { event.stopPropagation(); onHover(null); }}>
-    <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} transparent
+    <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} depthWrite depthTest
       onBeforeCompile={shader => {
         shader.uniforms.uGather = card.gather;
         shader.uniforms.uFit = card.fit;

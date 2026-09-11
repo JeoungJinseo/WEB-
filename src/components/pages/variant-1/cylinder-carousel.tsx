@@ -87,7 +87,7 @@ export function CylinderCarousel() {
       const headerHeight = parseFloat(getComputedStyle(rootRef.current!).getPropertyValue('--oven-header-height')) || 0;
       const top = headerHeight + 24;
       const bottom = size.height - Math.max(88, size.height * .1);
-      const gap = Math.min(32, Math.max(16, size.height * .028));
+      const gap = Math.min(48, Math.max(24, size.height * .042));
       const imageHeight = Math.max(1, bottom - top - captionHeight - gap);
       const radius = cylinderConfig.radius * size.scale;
       const halfHeight = cylinderConfig.height * size.scale / 2;

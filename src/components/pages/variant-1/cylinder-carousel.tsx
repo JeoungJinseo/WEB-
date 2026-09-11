@@ -347,6 +347,7 @@ export function CylinderCarousel() {
     introActive.current = true;
     transition.current.target = 0;
     transition.current.progress = 0;
+    transition.current.velocity = 0;
     transitionProgress(0);
     resetTube.current();
     setTubeIntro(true);

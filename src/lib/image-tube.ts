@@ -10,9 +10,9 @@ export const tubeArtworks = [
 ];
 export interface TubeMotion {
   target: number; current: number; velocity: number; angle: number;
-  direction: number; speedScale: number; hovered: boolean; paused: boolean; reduced: boolean;
+  direction: number; paused: boolean; reduced: boolean;
 }
-export const createTubeMotion = (): TubeMotion => ({ target: 0, current: 0, velocity: 0, angle: 0, direction: 1, speedScale: 1, hovered: false, paused: false, reduced: false });
+export const createTubeMotion = (): TubeMotion => ({ target: 0, current: 0, velocity: 0, angle: 0, direction: 1, paused: false, reduced: false });
 export function scrollTube(motion: TubeMotion, delta: number) {
   if (!Number.isFinite(delta)) return;
   const bounded = Math.max(-320, Math.min(320, delta));
@@ -30,9 +30,8 @@ export function advanceTube(motion: TubeMotion, delta: number) {
   motion.current -= wrap;
   motion.target -= wrap;
   motion.velocity *= Math.pow(.92, dt * 60);
-  motion.speedScale += ((motion.hovered ? .35 : 1) - motion.speedScale) * lerp;
   if (!motion.reduced) {
     const base = motion.paused ? 0 : motion.direction * tubeConfig.baseSpeed;
-    motion.angle += (base + motion.velocity) * dt * motion.speedScale;
+    motion.angle += (base + motion.velocity) * dt;
   }
 }

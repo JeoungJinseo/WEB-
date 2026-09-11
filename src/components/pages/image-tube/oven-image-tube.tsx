@@ -32,7 +32,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     }
     return { row, col, baseRow, panel, texture, aspect, geometry,
       coordinates: new Float32Array(geometry.attributes.uv.array),
-      gather: { value: 0 }, fit: { value: 1 },
+      gather: { value: 0 }, fit: { value: 1 }, endAngle: null as number | null,
     };
   }), [textures]);
   useEffect(() => () => cards.forEach(card => card.geometry.dispose()), [cards]);
@@ -42,10 +42,11 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
   }, [textures, onReady]);
   useFrame((_, delta) => {
     const progress = transition.current.progress;
-    if (progress === 0 && transition.current.target === 0) advanceTube(motion.current, delta);
+    // Carry the idle rotation into the gather, then gently settle it.
+    advanceTube(motion.current, delta * (1 - transitionEase(0, .32, progress)));
     const reduced = transition.current.reduced;
-    const gather = reduced ? 0 : transitionEase(.06, .86, progress);
-    const lens = reduced ? 0 : transitionEase(.12, .9, progress);
+    const gather = reduced ? 0 : transitionEase(.02, .9, progress);
+    const lens = reduced ? 0 : transitionEase(.04, .9, progress);
     const endpoint = transition.current.frame;
     const perspective = camera as PerspectiveCamera;
     perspective.position.set(0, 0, 6.5 + (endpoint.cameraZ - 6.5) * lens);
@@ -70,8 +71,11 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
       const thetaStart = (card.col + (card.baseRow % 2 ? .5 : 0)) / 12 * Math.PI * 2
         - motion.current.angle * (.65 + card.baseRow / 4 * .9);
       const thetaEnd = (card.panel + .5) / 12 * Math.PI * 2 - .5;
-      const turn = Math.atan2(Math.sin(thetaEnd - thetaStart), Math.cos(thetaEnd - thetaStart));
-      const center = thetaStart + turn * gather;
+      if (progress === 0 && transition.current.target === 0) card.endAngle = null;
+      // Keep one continuous angular path while the starting rotation winds down.
+      // Recomputing the shortest angle can otherwise jump at the +/- PI seam.
+      card.endAngle ??= thetaStart + Math.atan2(Math.sin(thetaEnd - thetaStart), Math.cos(thetaEnd - thetaStart));
+      const center = thetaStart + (card.endAngle - thetaStart) * gather;
       const rowY = ((card.row - 7) * tubeConfig.rowSpacing - motion.current.current) * (1 - gather);
       const positions = card.geometry.attributes.position;
       for (let vertex = 0; vertex < positions.count; vertex++) {
@@ -98,12 +102,11 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
   const hover = (event: ThreeEvent<PointerEvent>, index: number) => {
     if (transition.current.target > 0) return;
     event.stopPropagation();
-    motion.current.hovered = true;
     onHover({ index, x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
   };
-  return <group>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled={false}
+  return <group>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled
     onPointerOver={event => hover(event, card.panel % 6)} onPointerMove={event => hover(event, card.panel % 6)}
-    onPointerOut={event => { event.stopPropagation(); motion.current.hovered = false; onHover(null); }}>
+    onPointerOut={event => { event.stopPropagation(); onHover(null); }}>
     <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} transparent
       onBeforeCompile={shader => {
         shader.uniforms.uGather = card.gather;
@@ -204,7 +207,6 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
     if (!ready) return;
     scrollTransition(transition.current, pixels, window.innerHeight);
     setHovered(null);
-    motion.current.hovered = false;
   }, [ready, transition]);
   useEffect(() => {
     let frame = 0;
@@ -215,6 +217,12 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
       previous = time;
       if (!document.hidden && ready) {
         advanceTransition(transition.current, elapsed, motion.current.reduced);
+        // Both scenes already share the exact pose here; avoid trapping input
+        // during the spring's imperceptible final tail.
+        if (transition.current.target === 1 && transition.current.progress >= .995) {
+          transition.current.progress = 1;
+          transition.current.velocity = 0;
+        }
         const progress = transition.current.progress;
         onProgress(progress);
         root.current?.style.setProperty('--tube-opacity', String(1 - (transition.current.reduced ? transitionEase(.15, .4, progress) : transitionEase(.9, 1, progress))));
@@ -249,7 +257,6 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
       move(event.deltaY * unit);
       setHovered(null);
-      motion.current.hovered = false;
     };
     surface.addEventListener('wheel', wheel, { passive: false });
     return () => {
@@ -281,7 +288,6 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
         event.currentTarget.setPointerCapture(event.pointerId);
         setHovered(null);
-        motion.current.hovered = false;
       }}
       onPointerMove={event => {
         pointer.current = { x: event.clientX / window.innerWidth * 2 - 1, y: event.clientY / window.innerHeight * 2 - 1 };
@@ -295,7 +301,7 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       }}
       onPointerCancel={() => { drag.current = null; }}
-      onPointerLeave={() => { setHovered(null); motion.current.hovered = false; pointer.current = { x: 0, y: 0 }; }}>
+      onPointerLeave={() => { setHovered(null); pointer.current = { x: 0, y: 0 }; }}>
       {unavailable ? <GalleryFallback onReady={onFallback} /> : <TubeBoundary fallback={<GalleryFallback onReady={onFallback} />}>
         <Canvas camera={{ position: [0, 0, 6.5], fov: 50 }} dpr={[1, 1.5]} frameloop={hidden ? 'never' : 'always'}
           gl={{ alpha: true, antialias: true }} fallback="OVEN SAUNA 그래픽 갤러리"

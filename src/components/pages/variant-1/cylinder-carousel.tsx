@@ -39,7 +39,9 @@ export function CylinderCarousel() {
   }, []);
   const transitionProgress = useCallback((progress: number) => {
     rootRef.current?.style.setProperty('--tube-ring-opacity', String(transition.current.reduced ? transitionEase(.15, .4, progress) : progress >= .9 ? 1 : 0));
-    rootRef.current?.style.setProperty('--tube-copy-opacity', String(transition.current.reduced ? transitionEase(.35, .55, progress) : transitionEase(.82, .98, progress)));
+    // Reveal the introduction as the rows finish collapsing, rather than
+    // waiting for the final renderer handoff or another scroll input.
+    rootRef.current?.style.setProperty('--tube-copy-opacity', String(transition.current.reduced ? transitionEase(.35, .55, progress) : transitionEase(.60, .68, progress)));
   }, []);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);

@@ -1,4 +1,4 @@
-import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type MutableRefObject } from 'react';
+import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useLoader, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import { BufferAttribute, DoubleSide, DynamicDrawUsage, ExtrudeGeometry, Group, Mesh, PerspectiveCamera, PlaneGeometry, ShaderChunk, ShaderMaterial, Sphere, SRGBColorSpace, Vector3 } from 'three';
@@ -35,7 +35,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     }
     return { row, col, baseRow, panel, texture, aspect, geometry,
       coordinates: new Float32Array(geometry.attributes.uv.array),
-      gather: { value: 0 }, fit: { value: 1 }, endAngle: null as number | null,
+      gather: { value: 0 }, fit: { value: 1 }, endAngle: null as number | null, layoutRevision: -1,
     };
   }), [textures]);
   useEffect(() => () => cards.forEach(card => card.geometry.dispose()), [cards]);
@@ -66,6 +66,10 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     const outerHeight = 1 + (2 * endpoint.scale - 1) * gather;
     const recess = transitionEase(.015, .38, progress);
     cards.forEach((card, id) => {
+      if (card.layoutRevision !== transition.current.layoutRevision) {
+        card.endAngle = null;
+        card.layoutRevision = transition.current.layoutRevision;
+      }
       const mesh = meshes.current[id];
       if (!mesh) return;
       const distance = Math.abs(card.row - 7);
@@ -196,8 +200,8 @@ function GalleryFallback({ onReady }: { onReady: () => void }) {
   </div>;
 }
 
-export default function OvenImageTube({ transition, onProgress, onComplete }: {
-  transition: TransitionRef; onProgress: (progress: number) => void; onComplete: () => void;
+export default function OvenImageTube({ active, transition, onProgress, onComplete }: {
+  active: boolean; transition: TransitionRef; onProgress: (progress: number) => void; onComplete: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const motion = useMemo<MotionRef>(() => ({ current: transition.current.motion }), [transition]);
@@ -210,6 +214,14 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
   const [paused, setPaused] = useState(false);
   const [hidden, setHidden] = useState(document.hidden);
 
+  useLayoutEffect(() => {
+    if (!active) return;
+    // Restore the retained canvas invisibly at the endpoint before revealing it.
+    const progress = transition.current.progress;
+    root.current?.style.setProperty('--tube-opacity', String(1 - (transition.current.reduced ? transitionEase(.15, .4, progress) : transitionEase(.9, 1, progress))));
+    root.current?.style.setProperty('--tube-ui-opacity', String(1 - transitionEase(.02, .22, progress)));
+  }, [active, transition]);
+
   const onReady = useCallback(() => setReady(true), []);
   const onFallback = useCallback(() => { setReady(true); setUnavailable(true); }, []);
   useEffect(() => {
@@ -218,11 +230,13 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
     return () => window.clearTimeout(timeout);
   }, [ready, onFallback]);
   const move = useCallback((pixels: number) => {
-    if (!ready) return;
+    if (!ready || !active) return;
     scrollTransition(transition.current, pixels, window.innerHeight);
     setHovered(null);
-  }, [ready, transition]);
+  }, [ready, active, transition]);
   useEffect(() => {
+    if (!active) return;
+    if (transition.current.progress > 0) root.current?.querySelector<HTMLElement>('.tube-stage')?.focus({ preventScroll: true });
     let frame = 0;
     let previous = performance.now();
     let finished = false;
@@ -241,13 +255,13 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
         onProgress(progress);
         root.current?.style.setProperty('--tube-opacity', String(1 - (transition.current.reduced ? transitionEase(.15, .4, progress) : transitionEase(.9, 1, progress))));
         root.current?.style.setProperty('--tube-ui-opacity', String(1 - transitionEase(.02, .22, progress)));
-        if (progress === 1 && !finished) { finished = true; onComplete(); return; }
+        if (progress === 1 && transition.current.target === 1 && !finished) { finished = true; onComplete(); return; }
       }
       frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [ready, transition, onProgress, onComplete]);
+  }, [active, ready, transition, onProgress, onComplete]);
   const onHover = useCallback((value: HoverInfo | null) => {
     if (drag.current) return;
     if (value && tooltip.current) {
@@ -257,7 +271,7 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
     setHovered(current => current?.index === value?.index ? current : value);
   }, []);
   useEffect(() => {
-    document.title = 'OVEN SAUNA — Image Tube';
+    if (active) document.title = 'OVEN SAUNA — Image Tube';
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const syncMotion = () => { motion.current.reduced = reduced.matches; transition.current.reduced = reduced.matches; };
     const syncVisibility = () => setHidden(document.hidden);
@@ -266,7 +280,7 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
     document.addEventListener('visibilitychange', syncVisibility);
     const surface = window;
     const wheel = (event: WheelEvent) => {
-      if (event.ctrlKey || unavailable) return;
+      if (!active || event.ctrlKey || unavailable) return;
       event.preventDefault();
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
       move(event.deltaY * unit);
@@ -278,14 +292,14 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
       document.removeEventListener('visibilitychange', syncVisibility);
       surface.removeEventListener('wheel', wheel);
     };
-  }, [unavailable, move]);
+  }, [active, unavailable, move]);
   const pause = () => {
     const next = !paused;
     setPaused(next);
     motion.current.paused = next;
     if (next) motion.current.velocity = 0;
   };
-  return <div className={`sauna-tube tube-embedded${unavailable ? ' tube-static' : ''}`} ref={root}>
+  return <div className={`sauna-tube tube-embedded${active ? '' : ' tube-inactive'}${unavailable ? ' tube-static' : ''}`} ref={root} aria-hidden={!active} inert={!active}>
     <div className="tube-chrome-shade" aria-hidden="true" />
     <h1 className="tube-sr-only">OVEN SAUNA — Graphic archive</h1>
     <div className="tube-stage" role="region" aria-label="OVEN SAUNA 그래픽 튜브. 스크롤 또는 위아래 방향키로 이동합니다." tabIndex={0}
@@ -317,7 +331,7 @@ export default function OvenImageTube({ transition, onProgress, onComplete }: {
       onPointerCancel={() => { drag.current = null; }}
       onPointerLeave={() => { setHovered(null); pointer.current = { x: 0, y: 0 }; }}>
       {unavailable ? <GalleryFallback onReady={onFallback} /> : <TubeBoundary fallback={<GalleryFallback onReady={onFallback} />}>
-        <Canvas camera={{ position: [0, 0, 6.5], fov: 50 }} dpr={[1, 1.5]} frameloop={hidden ? 'never' : 'always'}
+        <Canvas camera={{ position: [0, 0, 6.5], fov: 50 }} dpr={[1, 1.5]} frameloop={hidden || !active ? 'never' : 'always'}
           gl={{ alpha: true, antialias: true }} fallback="OVEN SAUNA 그래픽 갤러리"
           onCreated={({ gl, camera }) => { gl.setClearColor(0x000000, 0); camera.lookAt(0, 0, 0); }}>
           <ambientLight intensity={1.4} />

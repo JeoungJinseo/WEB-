@@ -1,9 +1,8 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { createTubeTransition, transitionEase } from '@/lib/tube-transition';
-import { advanceTube, createTubeMotion, tubeRingSpeedFactor } from '@/lib/image-tube';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createTubeTransition, scrollTransition, transitionEase } from '@/lib/tube-transition';
+import { advanceTube, tubeRingSpeedFactor } from '@/lib/image-tube';
 const OvenImageTube = lazy(() => import('../image-tube/oven-image-tube'));
 import { Renderer, Camera, Transform, Texture, Program, Mesh } from 'ogl';
 import gsap from 'gsap';
@@ -26,26 +25,22 @@ CustomEase.create('saunaFlow', '0.33, 0, 0.2, 1');
 CustomEase.create('saunaLinear', '0.4, 0, 0.6, 1');
 
 export function CylinderCarousel() {
-  const location = useLocation();
-  const routeNavigate = useNavigate();
-  const [tubeIntro, setTubeIntro] = useState(location.pathname === '/tube');
+  const [tubeIntro, setTubeIntro] = useState(true);
   const introActive = useRef(tubeIntro);
   const transition = useRef(createTubeTransition());
   const pendingScene = useRef<number | null>(null);
-  const resetTube = useRef<() => void>(() => {});
+  const returnToTube = useRef<() => void>(() => {});
   const releaseScroll = useRef<() => void>(() => {});
   const completeTube = useCallback(() => {
     introActive.current = false;
     releaseScroll.current();
     setTubeIntro(false);
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
-    routeNavigate('/', { replace: true, state: null });
-  }, [routeNavigate]);
+  }, []);
   const transitionProgress = useCallback((progress: number) => {
     rootRef.current?.style.setProperty('--tube-ring-opacity', String(transition.current.reduced ? transitionEase(.15, .4, progress) : progress >= .9 ? 1 : 0));
     rootRef.current?.style.setProperty('--tube-copy-opacity', String(transition.current.reduced ? transitionEase(.35, .55, progress) : transitionEase(.82, .98, progress)));
   }, []);
-  const entryProgress = useRef(Math.max(0, Math.min(1, Number(location.state?.scene) || 0)));
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
@@ -58,12 +53,20 @@ export function CylinderCarousel() {
   const textRefs = useRef<(HTMLDivElement | null)[]>([]);
   const navigateRef = useRef<(progress: number) => void>(() => {});
 
+  useLayoutEffect(() => {
+    document.body.classList.toggle('demo-tube', tubeIntro);
+    return () => document.body.classList.remove('demo-tube');
+  }, [tubeIntro]);
+
   useEffect(() => {
     if (!canvasRef.current || !rootRef.current || !wrapperRef.current || !contentRef.current || !containerRef.current) return;
     document.title = 'GOOBNE OVEN SAUNA — 2026 DDP Young Designer';
     let disposed = false;
     let animationFrame = 0;
     let fontsReady = false;
+    let rewindPixels = 0;
+    let touchY: number | null = null;
+    let reversingTouch = false;
     let timeline: gsap.core.Timeline | undefined;
     let renderer: Renderer | undefined;
     let texture: Texture | undefined;
@@ -94,9 +97,60 @@ export function CylinderCarousel() {
       smoothTouch: reducedMotion ? 0 : .1,
       effects: false,
     });
+    smoother.scrollTo(0, false);
     smoother.paused(introActive.current);
-    releaseScroll.current = () => { smoother.paused(false); ScrollTrigger.refresh(); };
+    releaseScroll.current = () => { document.body.classList.remove('demo-tube'); smoother.paused(false); ScrollTrigger.refresh(); };
     const context = gsap.context(() => {}, rootRef.current);
+    const queueRewind = (pixels: number) => {
+      if (introActive.current || !transition.current.ready || pixels >= 0) return false;
+      // Carry the unused part of a wheel/touch gesture over the zero boundary.
+      // A large upward gesture must not be lost when it reaches the first scene.
+      const remaining = rewindPixels < 0 ? pixels : pixels + Math.max(0, window.scrollY);
+      if (remaining >= 0) return false;
+      rewindPixels = Math.max(-Math.max(1600, window.innerHeight * 2.2), rewindPixels + remaining);
+      if (window.scrollY > 1) smoother.scrollTo(0, true);
+      return true;
+    };
+    const onBoundaryWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || introActive.current) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      if (event.deltaY > 0) rewindPixels = 0;
+      if (queueRewind(event.deltaY * unit)) event.preventDefault();
+    };
+    const onBoundaryKey = (event: KeyboardEvent) => {
+      if (introActive.current || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement;
+      if (target.closest('input,textarea,select,[contenteditable="true"]')) return;
+      if (event.key === 'Home') { event.preventDefault(); returnToTube.current(); }
+      else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+        if (queueRewind(event.key === 'PageUp' ? -300 : -120)) event.preventDefault();
+      } else if (event.key === 'ArrowDown' || event.key === 'PageDown') rewindPixels = 0;
+    };
+    const onTouchStart = (event: TouchEvent) => {
+      touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+      reversingTouch = false;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (touchY === null || event.touches.length !== 1) return;
+      const y = event.touches[0].clientY;
+      const pixels = touchY - y;
+      touchY = y;
+      if (introActive.current && reversingTouch) {
+        event.preventDefault();
+        scrollTransition(transition.current, pixels * 2, window.innerHeight);
+      } else if (queueRewind(pixels * 2)) {
+        event.preventDefault();
+        reversingTouch = true;
+      }
+    };
+    const onTouchEnd = () => { touchY = null; reversingTouch = false; };
+    window.addEventListener('wheel', onBoundaryWheel, { passive: false });
+    window.addEventListener('keydown', onBoundaryKey);
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
+
 
     const dimensions = () => {
       const width = window.innerWidth;
@@ -273,32 +327,44 @@ export function CylinderCarousel() {
         });
       });
       navigateRef.current = progress => {
+        rewindPixels = 0;
         const trigger = timeline?.scrollTrigger;
         if (!trigger) return;
         smoother.scrollTo(trigger.start + Math.max(0, Math.min(1, progress)) * (trigger.end - trigger.start), !reducedMotion);
       };
-      resetTube.current = () => {
-        smoother.scrollTo(0, false);
-        ScrollTrigger.update();
-        ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress(1));
-        timeline?.progress(0);
-        Object.assign(idleMotion, createTubeMotion(), { reduced: reducedMotion });
-        previousRotation = scrollRotation.y;
-        smoother.paused(true);
-        resize();
+      returnToTube.current = () => {
+        if (introActive.current) { transition.current.target = 0; return; }
+        rewindPixels = -Math.max(1600, window.innerHeight * 2.2);
+        smoother.scrollTo(0, true);
       };
       resize();
-      if (entryProgress.current) {
-        const trigger = timeline?.scrollTrigger;
-        if (trigger) smoother.scrollTo(trigger.start + entryProgress.current * (trigger.end - trigger.start), false);
-        entryProgress.current = 0;
-      }
       const animate = (time: number) => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);
         const delta = previousFrame === undefined ? 0 : Math.min(.05, Math.max(0, (time - previousFrame) / 1000));
         previousFrame = time;
         if (document.hidden) return;
+        // Wait for the cinematic camera to return to its exact opening pose,
+        // then reverse the retained tube geometry at the same live rotation.
+        if (!introActive.current && rewindPixels < 0 && smoother.scrollTop() <= 1 && (timeline?.progress() ?? 0) < .00001) {
+          smoother.scrollTo(0, false);
+          ScrollTrigger.update();
+          ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress(1));
+          timeline?.progress(0);
+          previousRotation = scrollRotation.y;
+          smoother.paused(true);
+          transition.current.progress = 1;
+          transition.current.target = 1;
+          transition.current.velocity = 0;
+          transition.current.layoutRevision++;
+          introActive.current = true;
+          transitionProgress(1);
+          // Use the queued distance directly, including HOME's full rewind.
+          transition.current.target = Math.max(0, 1 + rewindPixels / Math.max(1600, window.innerHeight * 2.2));
+          rewindPixels = 0;
+          setTubeIntro(true);
+        }
+
         // This clock owns rotation for both renderers, including while the OGL
         // canvas is hidden. No restart or acceleration ramp at the handoff.
         if (fontsReady) {
@@ -346,11 +412,17 @@ export function CylinderCarousel() {
       captionObserver.disconnect();
       rootRef.current?.style.removeProperty('--sauna-intro-copy-top');
       window.removeEventListener('resize', resize);
+      window.removeEventListener('wheel', onBoundaryWheel);
+      window.removeEventListener('keydown', onBoundaryKey);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
       navigateRef.current = () => {};
       context.revert();
       smoother.kill();
       releaseScroll.current = () => {};
-      resetTube.current = () => {};
+      returnToTube.current = () => {};
       transition.current.ready = false;
       particles.forEach(particle => { particle.geometry.remove(); particle.program.remove(); });
       cylinder?.geometry.remove();
@@ -361,17 +433,6 @@ export function CylinderCarousel() {
   }, []);
 
   useEffect(() => {
-    if (location.pathname !== '/tube' || introActive.current) return;
-    introActive.current = true;
-    transition.current.target = 0;
-    transition.current.progress = 0;
-    transition.current.velocity = 0;
-    transitionProgress(0);
-    resetTube.current();
-    setTubeIntro(true);
-  }, [location.pathname, transitionProgress]);
-
-  useEffect(() => {
     if (!tubeIntro && pendingScene.current !== null) {
       navigateRef.current(pendingScene.current);
       pendingScene.current = null;
@@ -379,6 +440,7 @@ export function CylinderCarousel() {
   }, [tubeIntro]);
 
   const navigate = (progress: number) => {
+    if (progress === 0) { returnToTube.current(); return; }
     if (introActive.current) {
       if (!transition.current.ready) return;
       pendingScene.current = progress;
@@ -407,9 +469,9 @@ export function CylinderCarousel() {
         ))}
       </div>
       {!tubeIntro && <button className="sauna-scroll-hint" onClick={nextScene} aria-label={chapter === 3 ? '처음으로' : '다음 시점으로 이동'}><span aria-hidden="true">{chapter === 3 ? '↑' : '↓'}</span>{chapter === 3 ? 'Back to top' : 'Scroll'}</button>}
-      {tubeIntro && <Suspense fallback={<div className="tube-bootstrap"><img src="/brand/oven-sauna-logo.svg" alt="OVEN SAUNA" /></div>}>
-        <OvenImageTube transition={transition} onProgress={transitionProgress} onComplete={completeTube} />
-      </Suspense>}
+      <Suspense fallback={<div className="tube-bootstrap"><img src="/brand/oven-sauna-logo.svg" alt="OVEN SAUNA" /></div>}>
+        <OvenImageTube active={tubeIntro} transition={transition} onProgress={transitionProgress} onComplete={completeTube} />
+      </Suspense>
       {loadError && <div className="sauna-error" role="alert">그래픽을 불러오지 못했습니다.<button onClick={() => window.location.reload()}>다시 불러오기</button></div>}
       <div ref={wrapperRef} id="smooth-wrapper"><div ref={contentRef} id="smooth-content"><div ref={containerRef} style={{ height: '500svh' }} /></div></div>
     </div>

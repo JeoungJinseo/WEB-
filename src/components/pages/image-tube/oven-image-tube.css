@@ -38,3 +38,5 @@
 .tube-embedded .tube-pause{pointer-events:auto}
 .oven-page .tube-continue{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:61;pointer-events:auto;color:#ddd;font:400 16px Archivo,Pretendard,sans-serif}
 @media(max-width:767px){.tube-embedded .tube-instruction p{font-size:12px}}
+
+.tube-inactive{visibility:hidden;pointer-events:none}

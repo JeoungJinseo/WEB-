@@ -3,6 +3,7 @@ import { createTubeMotion, type TubeMotion } from './image-tube';
 /** Shared endpoint: the prepared cinematic renderer publishes its live lens. */
 export interface TubeTransition {
   motion: TubeMotion;
+  layoutRevision: number;
   target: number;
   progress: number;
   velocity: number;
@@ -11,7 +12,7 @@ export interface TubeTransition {
   frame: { fov: number; shift: number; scale: number; cameraZ: number };
 }
 export const createTubeTransition = (): TubeTransition => ({
-  motion: createTubeMotion(),
+  motion: createTubeMotion(), layoutRevision: 0,
   target: 0, progress: 0, velocity: 0, ready: false, reduced: false,
   frame: { fov: 45, shift: 0, scale: 1, cameraZ: 8 },
 });

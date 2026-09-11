@@ -72,12 +72,18 @@ export function CylinderCarousel() {
     let scene: Transform | undefined;
     const particles: ParticleMesh[] = [];
     const cameraPosition = { x: 0, y: 0, z: 8, fov: 45 };
-    // Only the initial, stationary view reserves room for its introduction.
+    // Only the initial view reserves room for its introduction.
     // The canvas always fills the viewport; the opening lens offset blends
     // back to the original projection before the camera starts its flight.
     const openingBlend = { value: 1 };
     let opening = { fov: 45, shift: 0, copyTop: 0, centeredCopyTop: 0 };
-    let previousRotation = 0.5;
+    // Keep scroll and idle rotation separate so scrolling never resets the
+    // angle reached while waiting, and idle rotation does not trigger steam.
+    const scrollRotation = { y: .5 };
+    let previousRotation = .5;
+    let idleAngle = 0;
+    let idleSpeed = 0;
+    let previousFrame: number | undefined;
     let currentChapter = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const smoother = ScrollSmoother.create({
@@ -252,7 +258,7 @@ export function CylinderCarousel() {
           duration: unit, ease: 'saunaSmooth',
         }, unit * 7.5);
         if (cylinder && !reducedMotion) {
-          timeline.to(cylinder.rotation, { y: .5 + 28.27, duration: 100, ease: 'none' }, 0);
+          timeline.to(scrollRotation, { y: .5 + 28.27, duration: 100, ease: 'none' }, 0);
         }
         textRefs.current.forEach((element, index) => {
           gsap.timeline({ scrollTrigger: {
@@ -275,6 +281,9 @@ export function CylinderCarousel() {
         ScrollTrigger.update();
         ScrollTrigger.getAll().forEach(trigger => trigger.getTween()?.progress(1));
         timeline?.progress(0);
+        idleAngle = 0;
+        idleSpeed = 0;
+        previousRotation = scrollRotation.y;
         smoother.paused(true);
         resize();
       };
@@ -284,9 +293,11 @@ export function CylinderCarousel() {
         if (trigger) smoother.scrollTo(trigger.start + entryProgress.current * (trigger.end - trigger.start), false);
         entryProgress.current = 0;
       }
-      const animate = () => {
+      const animate = (time: number) => {
         if (disposed) return;
         animationFrame = requestAnimationFrame(animate);
+        const delta = previousFrame === undefined ? 0 : Math.min(.05, Math.max(0, (time - previousFrame) / 1000));
+        previousFrame = time;
         if (document.hidden) return;
         if (!renderer || !camera || !scene || !cylinder) return;
         if (introActive.current && transition.current.ready && transition.current.progress < (transition.current.reduced ? .1 : .88)) return;
@@ -297,9 +308,17 @@ export function CylinderCarousel() {
         rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * blend}px`);
         camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         camera.lookAt([0, 0, 0]);
-        const velocity = cylinder.rotation.y - previousRotation;
-        previousRotation = cylinder.rotation.y;
-        // Match Codrops' particle animation exactly: no idle drift or overlay.
+        if (!introActive.current && fontsReady && !reducedMotion) {
+          // About one turn per 70 seconds. Ease out the extra drift as the
+          // opening scroll takes over, retaining its accumulated angle.
+          const targetSpeed = .09 * (1 - transitionEase(0, .025, timeline?.progress() ?? 0));
+          idleSpeed += (targetSpeed - idleSpeed) * (1 - Math.exp(-4 * delta));
+          idleAngle += idleSpeed * delta;
+        }
+        cylinder.rotation.y = scrollRotation.y + idleAngle;
+        const velocity = scrollRotation.y - previousRotation;
+        previousRotation = scrollRotation.y;
+        // Steam responds only to the original scroll rotation.
         const speed = Math.abs(velocity) * 100;
         const isRotating = !reducedMotion && Math.abs(velocity) > .0001;
         particles.forEach(particle => {

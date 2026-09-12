@@ -99,3 +99,10 @@ video.film-media,.film-poster{filter:url(#source-red)}
  .corner{top:auto;bottom:5%;font-size:10px}
 }
 @media(max-height:500px){.scroll-hint{left:auto;right:10px;transform:none}.scroll-hint>span:first-child{font-size:9px}.scroll-hint>span:last-child{font-size:12px}}
+
+/* Failed/reduced media uses exactly one full original. The old foreground
+   cutout was made from a different frame and doubled the torso at its edge. */
+.film-page:is([data-fallback=true],[data-reduced=true]) .still-fallback{filter:url(#source-red)}
+.film-page:is([data-fallback=true],[data-reduced=true]) .scene-shade{visibility:visible;background:linear-gradient(to bottom,transparent 30%,#000 min(100%,calc(var(--film-top) + var(--artwork-height) * .98)))}
+.media-error{top:max(12px,env(safe-area-inset-top));bottom:auto;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);border:1px solid #ffffff26;border-radius:100px;background:#000c;color:#eee;font-size:12px;line-height:1.4;padding:8px 14px}
+@media(max-aspect-ratio:1/1){.media-error{top:calc(160px * var(--composition-scale) + 8px)}}

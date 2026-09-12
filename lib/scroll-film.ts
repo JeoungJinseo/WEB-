@@ -15,7 +15,14 @@ export type FilmMode = 'intro' | 'transition' | 'settling' | 'blocked' | 'idle';
 type Options={root:HTMLElement;video:HTMLVideoElement;onScene:(scene:Scene)=>void;onMode:(mode:FilmMode)=>void;onReady:()=>void;onError:()=>void;onFrame:(time:number)=>void;onHandoff?:(time:number,progress:number)=>void};
 export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFrame,onHandoff}:Options) {
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-  const controller=new AbortController();
+  let controller:AbortController|null=null;
+  let loadAttempt=0,loadToken=0,loadTimer:ReturnType<typeof setTimeout>|undefined;
+  const sources=[
+    {url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:false},
+    {url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:true},
+    {url:'./assets/hero-compatible.mp4?v=1',blob:false},
+    {url:'./assets/hero-compatible.mp4?v=1',blob:true},
+  ];
   const nativeFrames=typeof video.requestVideoFrameCallback==='function';
   let videoFrame=0,settleStart=0,handoffStart:number|null=null;
   let raf=0,ready=false,disposed=false,blobUrl='',lastScene:Scene='intro';
@@ -72,6 +79,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   }
   function tick(now:number){
     raf=0;if(!active()||disposed)return;
+    if(!ready){wake();return}
     if(mode==='settling'){
       if(now-settleStart>=SETTLE_DURATION*1000){setMode('idle');paint(target);return}
     }else if(direction>0){
@@ -123,22 +131,50 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   }
   function resume(){if(mode==='blocked')void playForward(blockedMode)}
   function seeked(){if(disposed)return;root.dataset.painted='true';paint(video.currentTime);wake()}
-  function data(){if(!disposed){root.dataset.painted='true';paint(video.currentTime)}}
+  function data(){if(!disposed){clearTimeout(loadTimer);root.dataset.painted='true';paint(video.currentTime)}}
   function timeupdate(){if(!nativeFrames&&playing()&&direction>0&&video.currentTime>=target)finish()}
   function fail(){
-    if(disposed)return;video.pause();cancelFrame();playRequest++;ready=false;reduced=true;
-    root.dataset.fallback='true';targetIndex=stopIndex=0;target=INTRO_END;
+    if(disposed)return;
+    clearTimeout(loadTimer);
+    if(loadAttempt<sources.length){void load();return}
+    controller?.abort();video.pause();cancelFrame();playRequest++;ready=false;reduced=true;
+    root.dataset.fallback='true';root.dataset.atmosphere='false';targetIndex=stopIndex=0;target=INTRO_END;
     setMode('idle');onError();paint(target);
   }
   async function load(){
+    const source=sources[loadAttempt++],token=++loadToken;
+    clearTimeout(loadTimer);controller?.abort();controller=new AbortController();
+    const signal=controller.signal;
+    video.pause();cancelFrame();playRequest++;ready=false;
+    targetIndex=stopIndex=0;target=INTRO_END;handoffStart=null;
+    root.dataset.painted='false';root.dataset.atmosphere='false';
+    root.dataset.mediaSource=source.blob?'buffered':'direct';
+    root.dataset.mediaQuality=loadAttempt<=2?'4k':'1080p';
+    setMode('intro');paint(0);
+    if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=''}
+    // Do not require a complete fetch + blob URL before playback. Native media
+    // can start as soon as its first frame arrives and avoids blob restrictions.
+    video.preload='auto';
+    loadTimer=setTimeout(()=>{if(!disposed&&token===loadToken)fail()},20000);
     try{
-      const response=await fetch('./assets/hero-scrub-4k.mp4?v=bt709-1',{signal:controller.signal});
-      if(!response.ok)throw new Error('film unavailable');
-      const blob=await response.blob();if(disposed)return;
-      blobUrl=URL.createObjectURL(blob);video.src=blobUrl;video.load();
-    }catch{if(!disposed&&!controller.signal.aborted)fail()}
+      let url=source.url;
+      if(source.blob){
+        const response=await fetch(url,{signal,cache:'reload'});
+        if(!response.ok)throw new Error('film unavailable');
+        const blob=await response.blob();
+        if(disposed||signal.aborted||token!==loadToken)return;
+        if(!blob.size||blob.type.includes('text/')||blob.type.includes('json'))throw new Error('invalid media response');
+        blobUrl=URL.createObjectURL(new Blob([blob],{type:'video/mp4'}));url=blobUrl;
+      }
+      if(disposed||signal.aborted||token!==loadToken)return;
+      video.src=url;video.load();
+    }catch{if(!disposed&&!signal.aborted&&token===loadToken)fail()}
   }
-  function metadata(){if(disposed)return;ready=true;onReady();void playForward('intro')}
+  function metadata(){if(disposed)return;ready=true;root.dataset.fallback='false';onReady();void playForward('intro')}
+  function retry(){
+    if(disposed||reduce.matches)return;
+    reduced=false;loadAttempt=0;root.dataset.fallback='false';void load();
+  }
   function wheel(event:WheelEvent){
     if(event.ctrlKey||Math.abs(event.deltaX)>Math.abs(event.deltaY))return;
     const content=event.target instanceof Element?event.target.closest<HTMLElement>('.content-frame'):null;
@@ -185,8 +221,8 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   reduce.addEventListener('change',preference);
   root.dataset.reduced=String(reduced);setMode(reduced?'idle':'intro');layout();
   if(reduced){onReady();paint(target)}else void load();
-  return {goTo,next:()=>step(1),replayIntro,resume,dispose:()=>{
-    disposed=true;playRequest++;controller.abort();cancelAnimationFrame(raf);cancelFrame();video.pause();
+  return {goTo,next:()=>step(1),replayIntro,resume,retry,dispose:()=>{
+    disposed=true;playRequest++;loadToken++;clearTimeout(loadTimer);controller?.abort();cancelAnimationFrame(raf);cancelFrame();video.pause();
     video.removeEventListener('loadedmetadata',metadata);video.removeEventListener('loadeddata',data);
     video.removeEventListener('seeked',seeked);video.removeEventListener('error',fail);video.removeEventListener('timeupdate',timeupdate);
     video.removeAttribute('src');video.load();if(blobUrl)URL.revokeObjectURL(blobUrl);

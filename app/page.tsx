@@ -25,7 +25,7 @@ export default function Home() {
  useEffect(()=>{
   if(!root.current||!video.current||!foreground.current||!atmosphere.current)return;
   const ambient=createFilmAtmosphere(root.current,atmosphere.current,foreground.current,video.current);
-  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:mode=>{setMode(mode);ambient.setMode(mode)},onReady:()=>setReady(true),onError:()=>{setFailed(true);setReady(true)},onFrame:ambient.frame,onHandoff:ambient.handoff});
+  const film=mountScrollFilm({root:root.current,video:video.current,onScene:setScene,onMode:mode=>{setMode(mode);ambient.setMode(mode)},onReady:()=>{setReady(true);setFailed(false)},onError:()=>{setFailed(true);setReady(true)},onFrame:ambient.frame,onHandoff:ambient.handoff});
   player.current=film;
   return ()=>{player.current=null;film.dispose();ambient.dispose()};
  },[]);
@@ -44,7 +44,6 @@ export default function Home() {
    <div className="scene-shade"/>
    <div className="composition wordmark-frame"><div className={`profile-wordmark ${profile?'is-active':''}`} aria-hidden="true"><Reveal order={3}><img src="./assets/wordmark-wide.svg" alt=""/></Reveal></div></div>
    <canvas ref={foreground} className={`film-media foreground ${profile?'is-active':''}`} aria-hidden="true"/>
-   <img className="still-cutout" src="./assets/profile-cutout.png" alt=""/>
    <div className="composition chrome-frame"><header className={`site-header ${!intro?'is-active':''}`} inert={intro}>
     <a className="brand" href="#intro" onClick={e=>{e.preventDefault();jump(0)}} aria-label="GOOBNE OVEN SAUNA 시작으로"><Reveal><img className="brand-mark" src="./assets/mark.svg" alt=""/></Reveal><span className="brand-type"><Reveal order={1}><strong>GOOBNE OVEN SAUNA</strong></Reveal><Reveal order={2}><small>2026 DDP YOUNG DESIGNER</small></Reveal></span></a>
     <nav className="nav" aria-label="메인 메뉴">
@@ -70,7 +69,7 @@ export default function Home() {
    </div>
    <div className="composition corner-frame"><div className={`corners ${!intro&&!profile?'is-active':''}`} aria-hidden="true"><span className="corner left">{scene==='front'?'SWEAT OUT, GATHER IN':'GOOBNE OVEN SAUNA'}</span><span className="corner right">{scene==='front'?'SWEAT OUT, GATHER IN':'2026 DDP YOUNG DESIGNER'}</span></div></div>
    <button className={`scroll-hint ${intro?'on-intro':''} ${(mode==='intro'||mode==='transition'||mode==='settling')&&ready?'is-hidden':''}`} disabled={!ready||mode==='intro'||mode==='transition'||mode==='settling'} onClick={()=>mode==='blocked'?player.current?.resume():jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={mode==='blocked'?'영상 재생':scene==='front'?'인트로부터 다시 재생':'다음 장면 재생'}><span>{!ready?'LOADING FILM':mode==='blocked'?'PLAY FILM':scene==='front'?'BACK TO START':'SCROLL FOR NEXT SCENE'}</span><span className="hint-arrow">{mode==='blocked'?'▶':scene==='front'?'↑':'↓'}</span></button>
-   {failed&&<p className="media-error" role="status">영상을 불러오지 못해 원본 이미지로 표시합니다. <button onClick={()=>location.reload()}>다시 시도</button></p>}
+   {failed&&<button className="media-error" onClick={()=>{setFailed(false);setReady(false);player.current?.retry()}}>영상 다시 연결</button>}
    <div className="film-progress" aria-hidden="true"><span/></div>
   </div>
   <noscript><div className="no-script"><img src="./assets/back.png" alt="OVEN SAUNA"/><p>스크롤 필름을 보려면 JavaScript를 켜 주세요.</p></div></noscript>

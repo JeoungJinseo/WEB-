@@ -123,7 +123,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     onHover({ index, x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
   };
   return <group ref={rotatingGroup}>{cards.map((card, id) => <mesh key={id} ref={value => { meshes.current[id] = value; }} geometry={card.geometry} frustumCulled
-    onPointerOver={event => hover(event, card.panel % 6)} onPointerMove={event => hover(event, card.panel % 6)}
+    onPointerOver={event => hover(event, card.panel % tubeArtworks.length)} onPointerMove={event => hover(event, card.panel % tubeArtworks.length)}
     onPointerOut={event => { event.stopPropagation(); onHover(null); }}>
     <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} depthWrite depthTest
       onBeforeCompile={shader => {
@@ -345,7 +345,7 @@ export default function OvenImageTube({ active, transition, onProgress, onComple
       {!ready && <img className="tube-loading-logo" src="/brand/oven-sauna-logo.svg" alt="OVEN SAUNA 그래픽 불러오는 중" />}
     </div>
     {hovered && <div className="tube-tooltip" ref={tooltip} style={{ left: Math.min(hovered.x + 18, window.innerWidth - 150), top: Math.min(hovered.y + 18, window.innerHeight - 110) }}>
-      <span>{String(hovered.index + 1).padStart(2, '0')} / 06</span><strong>{tubeArtworks[hovered.index].title}</strong>
+      <span>{String(hovered.index + 1).padStart(2, '0')} / {String(tubeArtworks.length).padStart(2, '0')}</span><strong>{tubeArtworks[hovered.index].title}</strong>
     </div>}
     <div className="tube-bottom-shade" aria-hidden="true" />
     {!unavailable && <div className="tube-instruction"><span aria-hidden="true">↓</span><p>스크롤하면 OVEN SAUNA의 이야기가 시작됩니다.</p></div>}

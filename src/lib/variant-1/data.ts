@@ -7,14 +7,17 @@ export const images = [
   './oven-sauna/04-eye.png',
   './oven-sauna/05-steam.png',
   './oven-sauna/06-towel.png',
+  './oven-sauna/07-tile.png',
+  './oven-sauna/08-goob.png',
+  './oven-sauna/09-gather.png',
+  './oven-sauna/10-sauna.png',
 ];
 
 // Originals remain intact in a 4:5 atlas. The material cover-fits each tile
 // within the reference cylinder, preserving proportions with narrow side crops.
 export const imageConfig = { width: 480, height: 600 };
-// Repeat the six artworks around the ring without lowering texture resolution.
-// Keep the reference's twelve-panel rhythm with six repeating artworks.
-export const imageRepeat = 2;
+// Keep the same twelve panels as artworks are added; cycle the collection within them.
+export const imageRepeat = 12 / images.length;
 
 export const perspectives: Perspective[] = [
   {

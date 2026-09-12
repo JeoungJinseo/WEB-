@@ -10,6 +10,10 @@ export const tubeArtworks = [
   { src: '/oven-sauna/04-eye.png', title: 'EYE' },
   { src: '/oven-sauna/05-steam.png', title: 'STEAM' },
   { src: '/oven-sauna/06-towel.png', title: 'TOWEL' },
+  { src: '/oven-sauna/07-tile.png', title: 'TILE' },
+  { src: '/oven-sauna/08-goob.png', title: 'GOOB!' },
+  { src: '/oven-sauna/09-gather.png', title: 'GATHER IN' },
+  { src: '/oven-sauna/10-sauna.png', title: 'SAUNA' },
 ];
 export interface TubeMotion {
   target: number; current: number; velocity: number; angle: number;

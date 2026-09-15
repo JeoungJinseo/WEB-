@@ -17,7 +17,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
   const textures = useTexture(tubeArtworks.map(art => art.src));
   const meshes = useRef<(Mesh | null)[]>([]);
   const rotatingGroup = useRef<Group>(null);
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const cards = useMemo(() => Array.from({ length: tubeConfig.rows * tubeConfig.repeats * tubeConfig.columns }, (_, id) => {
     const row = Math.floor(id / tubeConfig.columns);
     const col = id % tubeConfig.columns;
@@ -57,9 +57,11 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     const endpoint = transition.current.frame;
     const perspective = camera as PerspectiveCamera;
     perspective.position.set(0, 0, 6.5 + (endpoint.cameraZ - 6.5) * lens);
-    perspective.fov = 50 + (endpoint.fov - 50) * lens;
+    const introFov = 2 * Math.atan(Math.tan(50 * Math.PI / 360) / Math.min(1, Math.max(.7, size.width / size.height))) * 180 / Math.PI;
+    perspective.fov = introFov + (endpoint.fov - introFov) * lens;
     perspective.updateProjectionMatrix();
     // Exactly the same off-axis opening lens as the prepared OGL scene.
+    perspective.projectionMatrix.elements[8] = endpoint.shiftX * lens;
     perspective.projectionMatrix.elements[9] = endpoint.shift * lens;
     perspective.projectionMatrixInverse.copy(perspective.projectionMatrix).invert();
     const outerRadius = 4 + (2.5 * endpoint.scale - 4) * gather;
@@ -118,7 +120,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     });
   });
   const hover = (event: ThreeEvent<PointerEvent>, index: number) => {
-    if (transition.current.target > 0) return;
+    if (transition.current.target > 0 || event.pointerType === 'touch') return;
     event.stopPropagation();
     onHover({ index, x: event.nativeEvent.clientX, y: event.nativeEvent.clientY });
   };
@@ -154,10 +156,12 @@ function SaunaLogo({ motion, pointer, transition }: { motion: MotionRef; pointer
   }, [svg]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const depth = 4.3;
-  const view = viewport.getCurrentViewport(camera, new Vector3(0, 0, depth));
-  const scale = view.width * (size.width < 768 ? .68 : .36);
+  const logoTarget = useMemo(() => new Vector3(0, 0, depth), []);
   useFrame(() => {
     if (!logo.current) return;
+    const view = viewport.getCurrentViewport(camera, logoTarget);
+    const fluid = Math.max(0, Math.min(1, (size.width - 600) / 424));
+    logo.current.scale.setScalar(Math.min(view.width * (.68 - .32 * fluid), view.height * 1.6));
     const fade = 1 - transitionEase(.02, .24, transition.current.progress);
     logo.current.visible = fade > .001;
     logo.current.traverse(object => {
@@ -172,7 +176,7 @@ function SaunaLogo({ motion, pointer, transition }: { motion: MotionRef; pointer
     logo.current.rotation.y += (pointer.current.x * .08 * amount - logo.current.rotation.y) * .06;
     logo.current.rotation.x += (-pointer.current.y * .04 * amount - logo.current.rotation.x) * .06;
   });
-  return <group ref={logo} position={[0, 0, depth]} scale={scale}>
+  return <group ref={logo} position={[0, 0, depth]}>
     <mesh position={[0, 0, -.09]}>
       <planeGeometry args={[1.65, .8]} />
       <shaderMaterial transparent depthWrite={false} uniforms={{ uFade: { value: 1 } }}
@@ -313,6 +317,7 @@ export default function OvenImageTube({ active, transition, onProgress, onComple
       }}
       onPointerDown={event => {
         if (event.button !== 0 || unavailable) return;
+        if (!event.isPrimary) { drag.current = null; return; }
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
         event.currentTarget.setPointerCapture(event.pointerId);
         setHovered(null);

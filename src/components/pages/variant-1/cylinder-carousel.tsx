@@ -3,6 +3,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createTubeTransition, scrollTransition, transitionEase } from '@/lib/tube-transition';
 import { advanceTube, tubeRingSpeedFactor } from '@/lib/image-tube';
+import { captionColumn, fitOpening } from '@/lib/responsive-layout';
 const OvenImageTube = lazy(() => import('../image-tube/oven-image-tube'));
 import { Renderer, Camera, Transform, Texture, Program, Mesh } from 'ogl';
 import gsap from 'gsap';
@@ -82,7 +83,9 @@ export function CylinderCarousel() {
     // The canvas always fills the viewport; the opening lens offset blends
     // back to the original projection before the camera starts its flight.
     const openingBlend = { value: 1 };
-    let opening = { fov: 45, shift: 0, copyTop: 0, centeredCopyTop: 0 };
+    let opening = { fov: 45, shift: 0, shiftX: 0, copyTop: 0, centeredCopyTop: 0, copyLeft: window.innerWidth / 2, copyWidth: window.innerWidth };
+    let sceneSize = { width: window.innerWidth, height: window.innerHeight };
+    let resizeFrame = 0;
     // Keep scroll and idle rotation separate so scrolling never resets the
     // angle reached while waiting, and idle rotation does not trigger steam.
     const scrollRotation = { y: .5 };
@@ -155,53 +158,56 @@ export function CylinderCarousel() {
 
 
     const dimensions = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const radius = width < 768 ? 1.8 : width < 1024 ? 2.2 : 2.5;
+      const surface = canvasRef.current?.parentElement;
+      const width = surface?.clientWidth || window.innerWidth;
+      const height = surface?.clientHeight || window.innerHeight;
+      const fluid = Math.max(0, Math.min(1, (width - 600) / 424));
+      const radius = 1.8 + .7 * fluid;
       const scale = radius / cylinderConfig.radius;
-      const fov = width < 768 ? 50 : 45;
-      const cameraZ = width < 768 ? 6 : width < 1024 ? 7 : 8;
+      const fov = 50 - 5 * fluid;
+      const cameraZ = 6 + 2 * fluid;
       return { width, height, scale, fov, cameraZ };
     };
     const resize = () => {
       const size = dimensions();
+      sceneSize = size;
       renderer?.setSize(size.width, size.height);
       cameraPosition.fov = size.fov;
       camera?.perspective({ fov: size.fov, aspect: size.width / size.height });
       cylinder?.scale.set(size.scale, size.scale, size.scale);
+      const style = getComputedStyle(rootRef.current!);
+      const number = (name: string) => parseFloat(style.getPropertyValue(name)) || 0;
+      const headerStyle = getComputedStyle(rootRef.current!.querySelector('.oven-header')!);
+      const safeLeft = parseFloat(headerStyle.paddingLeft) || 0;
+      const safeRight = parseFloat(headerStyle.paddingRight) || 0;
+      const column = captionColumn(size.width, size.height, safeLeft, safeRight);
+      rootRef.current!.style.setProperty('--sauna-intro-copy-width', `${column.copyWidth}px`);
       textRefs.current.forEach(element => {
         if (element) element.style.setProperty('--sauna-copy-height', `${Math.ceil(element.getBoundingClientRect().height)}px`);
       });
-      const captionHeight = textRefs.current[0]?.getBoundingClientRect().height ?? 144;
-      const headerHeight = parseFloat(getComputedStyle(rootRef.current!).getPropertyValue('--oven-header-height')) || 0;
-      const top = headerHeight + 24;
-      const bottom = size.height - Math.max(88, size.height * .1);
-      const gap = Math.min(48, Math.max(24, size.height * .042));
-      const imageHeight = Math.max(1, bottom - top - captionHeight - gap);
-      const radius = cylinderConfig.radius * size.scale;
-      const halfHeight = cylinderConfig.height * size.scale / 2;
-      // Fit the entire opening cylinder by changing its projection, never by
-      // cropping the renderer. All later views use the original field of view.
-      const tangent = Math.max(
-        Math.tan(size.fov * Math.PI / 360),
-        size.height * halfHeight / (imageHeight * (size.cameraZ - radius)),
-        size.height * radius / (Math.max(1, size.width - 48) * Math.sqrt(size.cameraZ ** 2 - radius ** 2)),
-      );
-      const ringHeight = size.height * halfHeight / (tangent * (size.cameraZ - radius));
-      const groupTop = top + (bottom - top - ringHeight - gap - captionHeight) / 2;
-      opening = {
-        fov: 2 * Math.atan(tangent) * 180 / Math.PI,
-        shift: 2 * (groupTop + ringHeight / 2) / size.height - 1,
-        copyTop: groupTop + ringHeight + gap,
-        centeredCopyTop: Math.max(size.height / 2 - captionHeight / 2, top),
-      };
+      const headerHeight = number('--oven-header-height');
+      // Resolve calc()/env() footer spacing through a CSS length, not parseFloat.
+      const footer = rootRef.current!.querySelector('.oven-footer>span');
+      const footerBottom = footer ? size.height - footer.getBoundingClientRect().bottom : 0;
+      const bottomSpace = (column.sideBySide ? 62 : 64) + Math.max(0, footerBottom);
+      opening = fitOpening({ ...size, headerHeight, captionHeight: textRefs.current[0]?.getBoundingClientRect().height ?? 144,
+        bottomSpace, safeLeft, safeRight });
       if (renderer && camera && scene && cylinder) transition.current.ready = false;
-      transition.current.frame = { fov: opening.fov, shift: opening.shift, scale: size.scale, cameraZ: size.cameraZ };
+      transition.current.frame = { fov: opening.fov, shift: opening.shift, shiftX: opening.shiftX, scale: size.scale, cameraZ: size.cameraZ };
       rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * openingBlend.value}px`);
+      rootRef.current!.style.setProperty('--sauna-intro-copy-left', `${size.width / 2 + (opening.copyLeft - size.width / 2) * openingBlend.value}px`);
     };
-    const captionObserver = new ResizeObserver(resize);
+    const scheduleResize = () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(resize);
+    };
+    const captionObserver = new ResizeObserver(scheduleResize);
     textRefs.current.forEach(element => { if (element) captionObserver.observe(element); });
-    window.addEventListener('resize', resize);
+    if (canvasRef.current.parentElement) captionObserver.observe(canvasRef.current.parentElement);
+    const header = rootRef.current.querySelector('.oven-header');
+    if (header) captionObserver.observe(header);
+    window.addEventListener('resize', scheduleResize);
+    window.visualViewport?.addEventListener('resize', scheduleResize);
     resize();
     const originals = [...images, './atmosphere/steam-reference.png'].map(src => new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
@@ -216,7 +222,7 @@ export function CylinderCarousel() {
       try {
         const size = dimensions();
         renderer = new Renderer({ canvas: canvasRef.current!, width: size.width, height: size.height,
-          dpr: Math.min(window.devicePixelRatio, 2), alpha: true, premultipliedAlpha: true, antialias: true });
+          dpr: Math.min(window.devicePixelRatio, size.width <= 1023 || size.height <= 600 ? 1.5 : 2), alpha: true, premultipliedAlpha: true, antialias: true });
         const gl = renderer.gl;
         gl.clearColor(0, 0, 0, 0);
         camera = new Camera(gl, { fov: size.fov, aspect: size.width / size.height });
@@ -225,7 +231,7 @@ export function CylinderCarousel() {
         scene = new Transform();
         const atlas = document.createElement('canvas');
         const ctx = atlas.getContext('2d', { alpha: false })!;
-        const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), window.innerWidth < 768 ? 2048 : 8192);
+        const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), size.width <= 1023 || size.height <= 600 ? 4096 : 8192);
         const unit = Math.max(1, Math.floor(Math.min(imageConfig.width / 4, imageConfig.height / 5, limit / (images.length * 4), limit / 5)));
         atlas.width = unit * 4 * images.length;
         atlas.height = unit * 5;
@@ -377,9 +383,11 @@ export function CylinderCarousel() {
         if (introActive.current && transition.current.ready && transition.current.progress < (transition.current.reduced ? .1 : .88)) return;
         const blend = openingBlend.value;
         const fov = cameraPosition.fov + (opening.fov - cameraPosition.fov) * blend;
-        camera.perspective({ fov, aspect: window.innerWidth / window.innerHeight });
+        camera.perspective({ fov, aspect: sceneSize.width / sceneSize.height });
+        camera.projectionMatrix[8] = opening.shiftX * blend;
         camera.projectionMatrix[9] = opening.shift * blend;
         rootRef.current!.style.setProperty('--sauna-intro-copy-top', `${opening.centeredCopyTop + (opening.copyTop - opening.centeredCopyTop) * blend}px`);
+        rootRef.current!.style.setProperty('--sauna-intro-copy-left', `${sceneSize.width / 2 + (opening.copyLeft - sceneSize.width / 2) * blend}px`);
         camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         camera.lookAt([0, 0, 0]);
         cylinder.rotation.y = scrollRotation.y + idleMotion.angle * tubeRingSpeedFactor;
@@ -413,7 +421,11 @@ export function CylinderCarousel() {
       cancelAnimationFrame(animationFrame);
       captionObserver.disconnect();
       rootRef.current?.style.removeProperty('--sauna-intro-copy-top');
-      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(resizeFrame);
+      window.removeEventListener('resize', scheduleResize);
+      window.visualViewport?.removeEventListener('resize', scheduleResize);
+      rootRef.current?.style.removeProperty('--sauna-intro-copy-left');
+      rootRef.current?.style.removeProperty('--sauna-intro-copy-width');
       window.removeEventListener('wheel', onBoundaryWheel);
       window.removeEventListener('keydown', onBoundaryKey);
       window.removeEventListener('touchstart', onTouchStart);

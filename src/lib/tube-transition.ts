@@ -9,12 +9,12 @@ export interface TubeTransition {
   velocity: number;
   ready: boolean;
   reduced: boolean;
-  frame: { fov: number; shift: number; scale: number; cameraZ: number };
+  frame: { fov: number; shift: number; shiftX: number; scale: number; cameraZ: number };
 }
 export const createTubeTransition = (): TubeTransition => ({
   motion: createTubeMotion(), layoutRevision: 0,
   target: 0, progress: 0, velocity: 0, ready: false, reduced: false,
-  frame: { fov: 45, shift: 0, scale: 1, cameraZ: 8 },
+  frame: { fov: 45, shift: 0, shiftX: 0, scale: 1, cameraZ: 8 },
 });
 export const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 export function transitionEase(start: number, end: number, value: number) {

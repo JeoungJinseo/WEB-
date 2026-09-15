@@ -5,7 +5,7 @@
 @font-face{font-family:Pretendard;src:url('/brand/pretendard-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 
 .demo-1{--sauna-red:#ED0505;--sauna-ink:#080000;--sauna-paper:#fff;--sauna-line:#ffffff33;background:#000;color:var(--sauna-paper);font-family:Utendo,Arial,sans-serif}
-.oven-page{--oven-header-height:132px}
+.oven-page{--oven-header-height:132px;--oven-safe-top:env(safe-area-inset-top,0px);--oven-safe-bottom:env(safe-area-inset-bottom,0px);--oven-safe-left:env(safe-area-inset-left,0px);--oven-safe-right:env(safe-area-inset-right,0px);--oven-bottom-space:88px;--oven-scene-gap:24px}
 .oven-page button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .oven-page button:focus-visible{outline:2px solid var(--sauna-paper);outline-offset:6px}
 .oven-page button:disabled{cursor:default}
@@ -47,10 +47,10 @@
 .sauna-vapor-fallback{position:absolute;inset:0;mask-image:linear-gradient(transparent,#000 18%,#000 75%,transparent)}
 .sauna-vapor-fallback i{position:absolute;left:-15%;bottom:-15%;width:130%;height:130%;background:var(--sauna-red);mask-image:url('/atmosphere/intro-mist.png');mask-mode:luminance;mask-size:100% 100%;filter:blur(10px);opacity:.35;animation:sauna-vapor-rise 64s ease-in-out infinite alternate}
 .sauna-vapor-fallback i:nth-child(2){left:0;opacity:.22;animation-duration:80s;animation-delay:-40s}
-.sauna-scene{position:fixed;inset:0;z-index:2;pointer-events:none}
+.sauna-scene{position:fixed;inset:0; height:100dvh;z-index:2;pointer-events:none}
 .sauna-scene canvas{display:block;width:100%;height:100%}
 .sauna-fallback{display:block;position:absolute;inset:25% 20% 18%;width:60%;height:57%;object-fit:contain}
-.sauna-copy{position:fixed;z-index:4;pointer-events:none;inset:0;text-align:center}
+.sauna-copy{position:fixed;z-index:4;pointer-events:none;inset:0;height:100dvh;text-align:center}
 .oven-footer{position:absolute;inset:0;pointer-events:none;font:400 10.905px Utendo,Pretendard,sans-serif;color:#b5b5b5}
 .oven-footer>span{position:absolute;top:91.9209%}
 .oven-footer>span:first-child{left:5%}
@@ -80,16 +80,43 @@
 .sauna-perspective-3{top:max(calc(100% - 80px - var(--sauna-copy-height)),calc(var(--oven-header-height) + 24px));transform:translateX(-50%)}
 .oven-page .sauna-scroll-hint{position:fixed;z-index:60;right:4.35vw;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px;font:400 14px Archivo,Arial,sans-serif;opacity:.65}
 .sauna-scroll-hint>span{font:400 28px Archivo,Arial,sans-serif}
-@media(max-width:767px){
- .sauna-perspective{width:100%;max-width:100%;padding:0 24px}
- .sauna-perspective h2{font-size:30px}
- .sauna-perspective .sauna-perspective-description{font-size:16px;line-height:1.5;white-space:normal}
- .oven-page .sauna-scroll-hint{right:6vw;bottom:60px;font-size:14px}
+/* Compact layouts use readable controls, safe-area padding and fluid type. */
+@media(max-width:1023px),(max-height:600px){
+ .oven-page{--oven-bottom-space:calc(76px + var(--oven-safe-bottom));--oven-scene-gap:16px}
+ .oven-chrome{width:100%;height:100dvh;transform:none}
+ .oven-header{height:auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;row-gap:6px;padding:calc(var(--oven-safe-top) + 10px) max(16px,var(--oven-safe-right)) 8px max(16px,var(--oven-safe-left))}
+ .oven-brand{position:static;gap:6px;min-width:0;min-height:44px}
+ .oven-brand-mark{width:28px;height:28px;margin:0}
+ .oven-brand-type{min-width:0}
+ .oven-brand-type strong{font-size:clamp(20px,4.7vw,26px)}
+ .oven-brand-type small{font-size:clamp(10px,2.5vw,12px);padding-top:5px}
+ .oven-page .oven-contact{position:static;grid-column:2;grid-row:1;width:auto;min-height:44px;padding:10px 12px;font-size:clamp(12px,3vw,15px)}
+ .oven-nav{position:static;grid-column:1 / -1;display:flex;gap:8px;justify-content:space-between;font-size:clamp(12px,3.2vw,14px)}
+ .oven-page .oven-nav button{min-width:44px;min-height:44px;padding:10px 2px}
+ .oven-nav button[aria-current]::after{left:0;right:0;bottom:4px}
+ .oven-footer{font-size:10px}
+ .oven-footer>span{top:auto;bottom:calc(var(--oven-safe-bottom) + 12px)}
+ .oven-footer>span:first-child{left:max(16px,var(--oven-safe-left))}
+ .oven-footer>span:last-child{right:max(16px,var(--oven-safe-right));max-width:48%;text-align:right}
+ .sauna-perspective{width:calc(100% - max(32px,var(--oven-safe-left) + var(--oven-safe-right) + 24px));max-width:880px;top:max(calc((var(--oven-header-height) + 100% - var(--oven-bottom-space))/2),calc(var(--oven-header-height) + var(--oven-scene-gap) + var(--sauna-copy-height)/2))}
+ .sauna-perspective h2{font-size:clamp(30px,5.8vw,52px);line-height:.95}
+ .sauna-perspective .sauna-perspective-description{font-size:clamp(15px,3.85vw,16px);line-height:1.5;margin-top:12px;white-space:normal}
+ .sauna-perspective-0{top:var(--sauna-intro-copy-top,65%);left:var(--sauna-intro-copy-left,50%);width:var(--sauna-intro-copy-width,calc(100% - 32px));max-width:880px;transform:translateX(-50%)}
+ .sauna-perspective-3{top:max(calc(100% - var(--oven-bottom-space) - var(--sauna-copy-height)),calc(var(--oven-header-height) + var(--oven-scene-gap)));transform:translateX(-50%)}
+ .oven-page .sauna-scroll-hint{right:max(12px,var(--oven-safe-right));bottom:calc(var(--oven-safe-bottom) + 24px);flex-direction:row;gap:6px;min-height:44px;font-size:12px;padding:8px}
+ .sauna-scroll-hint>span{font-size:22px}
 }
-
-@media(max-height:560px){
- .sauna-perspective-0 h2{font-size:32px}
- .sauna-perspective-0 .sauna-perspective-description{font-size:16px;line-height:1.4;margin-top:8px}
+@media(max-height:500px) and (min-aspect-ratio:6/5){
+ .oven-page{--oven-bottom-space:calc(70px + var(--oven-safe-bottom));--oven-scene-gap:10px}
+ .oven-header{padding-top:calc(var(--oven-safe-top) + 4px);padding-bottom:2px;row-gap:0}
+ .oven-brand-type strong{font-size:22px}
+ .oven-brand-type small{font-size:10px;padding-top:2px}
+ .oven-brand-mark{width:26px;height:26px}
+ .oven-page .oven-nav button{padding-top:8px;padding-bottom:8px}
+ .sauna-perspective h2{font-size:clamp(28px,7dvh,36px)}
+ .sauna-perspective .sauna-perspective-description{font-size:15px;line-height:1.4;margin-top:10px}
+ .oven-footer>span{bottom:calc(var(--oven-safe-bottom) + 8px)}
+ .oven-page .sauna-scroll-hint{bottom:calc(var(--oven-safe-bottom) + 18px)}
 }
 
 /* The cinematic renderer stays mounted while the tube converges into its lens. */

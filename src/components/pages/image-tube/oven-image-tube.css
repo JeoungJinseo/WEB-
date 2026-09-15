@@ -1,6 +1,6 @@
 .demo-tube{overflow:hidden}
-.sauna-tube{height:100dvh;min-height:320px;color:#fff}
-.tube-stage{position:fixed;inset:0;z-index:2;touch-action:none;cursor:grab;outline:none}
+.sauna-tube{height:100dvh;min-height:0;color:#fff}
+.tube-stage{position:fixed;inset:0;height:100dvh;z-index:2;touch-action:pinch-zoom;cursor:grab;outline:none}
 .tube-stage:active{cursor:grabbing}
 .tube-stage:focus-visible{outline:1px solid #ed050580;outline-offset:-10px}
 .tube-stage canvas{display:block}
@@ -40,3 +40,19 @@
 @media(max-width:767px){.tube-embedded .tube-instruction p{font-size:12px}}
 
 .tube-inactive{visibility:hidden;pointer-events:none}
+
+@media(max-width:1023px),(max-height:600px){
+ .tube-chrome-shade{height:calc(var(--oven-header-height) + 48px)}
+ .tube-bottom-shade{height:calc(120px + var(--oven-safe-bottom))}
+ .tube-instruction{left:max(16px,var(--oven-safe-left));right:calc(max(16px,var(--oven-safe-right)) + 58px);bottom:calc(var(--oven-safe-bottom) + 44px);transform:none;white-space:normal;gap:8px;min-height:44px}
+ .tube-embedded .tube-instruction p{font-size:14px;line-height:1.4;text-wrap:pretty}
+ .oven-page .tube-pause{right:max(16px,var(--oven-safe-right));bottom:calc(var(--oven-safe-bottom) + 44px);min-width:48px;min-height:44px;font-size:14px}
+ .tube-fallback{inset:calc(var(--oven-header-height) + 8px) max(16px,var(--oven-safe-right)) calc(var(--oven-safe-bottom) + 110px) max(16px,var(--oven-safe-left))}
+ .tube-tooltip{display:none}
+ .oven-page .tube-continue{bottom:calc(var(--oven-safe-bottom) + 70px)}
+}
+@media(max-height:500px) and (min-aspect-ratio:6/5){
+ .tube-instruction,.oven-page .tube-pause{bottom:calc(var(--oven-safe-bottom) + 24px)}
+ .tube-bottom-shade{height:80px}
+ .tube-embedded .tube-instruction p{font-size:13px}
+}

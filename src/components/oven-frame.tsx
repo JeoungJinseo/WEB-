@@ -13,13 +13,15 @@ export function OvenFrame({ chapter, onNavigate }: OvenFrameProps) {
     const page = frameRef.current?.parentElement;
     if (!header || !page) return;
     const syncHeight = () => page.style.setProperty('--oven-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
-    // Same 1440 × 1024 composition and portrait minimum as oven-sauna-ddp.
-    // Scale the entire frame together, rather than sizing each item separately.
+    // Preserve the reference proportions on desktop; compact screens reflow.
     const syncComposition = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
       const fit = Math.min(width / 1440, height / 1024);
-      const scale = width < height ? Math.max(.62, fit) : fit;
+      // Compact screens reflow at their real size so labels and touch targets
+      // remain readable; the established desktop composition stays intact.
+      const compact = width <= 1023 || height <= 600;
+      const scale = compact ? 1 : width < height ? Math.max(.62, fit) : fit;
       page.style.setProperty('--oven-ui-scale', String(scale));
       page.style.setProperty('--oven-ui-width', `${width / scale}px`);
       page.style.setProperty('--oven-ui-height', `${height / scale}px`);
@@ -29,9 +31,11 @@ export function OvenFrame({ chapter, onNavigate }: OvenFrameProps) {
     const observer = new ResizeObserver(syncHeight);
     observer.observe(header);
     window.addEventListener('resize', syncComposition);
+    window.visualViewport?.addEventListener('resize', syncComposition);
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', syncComposition);
+      window.visualViewport?.removeEventListener('resize', syncComposition);
       ['--oven-header-height', '--oven-ui-scale', '--oven-ui-width', '--oven-ui-height']
         .forEach(property => page.style.removeProperty(property));
     };

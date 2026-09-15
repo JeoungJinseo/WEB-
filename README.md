@@ -62,3 +62,11 @@ Figma: `8hKWLXpGTm4KO8ooh1SNSZ` — back `1009:1111`, profile `1009:974`, front 
 ## GitHub Pages
 
 `pnpm build:pages`는 동일한 React 화면을 정적 사이트 `dist-pages/`로 빌드합니다. 기본 경로는 `/oven-sauna/`이며 저장소 이름을 바꾸면 `GITHUB_PAGES_BASE=/새이름/ pnpm build:pages`로 설정합니다. `dist-pages/`를 `gh-pages` 브랜치 루트에 배포합니다. 서버나 ChatGPT 로그인이 필요하지 않습니다.
+
+## Mobile layout pass — 2026-09-16
+
+Phones (width <= 600 px, or width <= 1000 px with height <= 600 px) use native CSS text sizing instead of shrinking the desktop artboard. The header has 44 px touch targets; the content area reflows and scrolls independently when needed. Safe-area insets protect the header and bottom scene control. Tablet and desktop composition remains separate.
+
+Compact screens first load the existing 1080p compatible clip (about 9 MB), retaining the same scene timing; desktop still starts with the 4K asset. Rotation/browser-bar resizes are coalesced and retain the displayed frame; pinch gestures do not trigger a scene change. The original media aspect ratio is preserved.
+
+Validation: production build, 19 viewport layout cases and scene playback tests pass, including rotation, resize, multi-touch cancellation and media selection. Browser inspection at 390x844 and 320x568 confirmed readable text, 44 px navigation targets and independently scrollable long content. Landscape browser verification was interrupted by a local preview connection failure; its geometry and interaction are covered by automated tests. Real-device Safari/Android testing has not been performed.

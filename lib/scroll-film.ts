@@ -17,12 +17,11 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
   let controller:AbortController|null=null;
   let loadAttempt=0,loadToken=0,loadTimer:ReturnType<typeof setTimeout>|undefined;
-  const sources=[
-    {url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:false},
-    {url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:true},
-    {url:'./assets/hero-compatible.mp4?v=1',blob:false},
-    {url:'./assets/hero-compatible.mp4?v=1',blob:true},
-  ];
+  const high=[{url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:false,quality:'4k'},{url:'./assets/hero-scrub-4k.mp4?v=bt709-2',blob:true,quality:'4k'}];
+  const compatible=[{url:'./assets/hero-compatible.mp4?v=1',blob:false,quality:'1080p'},{url:'./assets/hero-compatible.mp4?v=1',blob:true,quality:'1080p'}];
+  const sources=filmLayout(innerWidth,innerHeight,0).compact?[...compatible,...high]:[...high,...compatible];
+  let viewportWidth=innerWidth,viewportHeight=innerHeight,layoutFrame=0,paintedTime=0;
+  const visual=globalThis.visualViewport;
   const nativeFrames=typeof video.requestVideoFrameCallback==='function';
   let videoFrame=0,settleStart=0,handoffStart:number|null=null;
   let raf=0,ready=false,disposed=false,blobUrl='',lastScene:Scene='intro';
@@ -42,9 +41,11 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     paint(frame.mediaTime);watchFrame();
   }
   function paint(t:number) {
+    paintedTime=t;
     root.dataset.time=t.toFixed(3);
     root.style.setProperty('--progress',String(clamp((t-INTRO_END)/(SCENE_STOPS[2]-INTRO_END))));
-    const fit=filmLayout(innerWidth,innerHeight,t);
+    const fit=filmLayout(viewportWidth,viewportHeight,t);
+    root.dataset.compact=String(fit.compact);
     root.style.setProperty('--film-width',`${fit.filmWidth}px`);
     root.style.setProperty('--film-top',`${fit.filmTop}px`);
     root.style.setProperty('--composition-width',`${fit.compositionWidth}px`);
@@ -67,7 +68,16 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     }
     setScene(t);onFrame(t);
   }
-  function layout(){root.style.height=`${innerHeight}px`;scrollTo({top:0,behavior:'instant'});paint(ready?video.currentTime:mode==='idle'?target:0)}
+  function layout(){
+    layoutFrame=0;
+    // Pinch zoom must not recompose or seek the film. Browser-bar and rotation
+    // resizes keep the held frame, current section and native content scroll.
+    if(visual&&visual.scale>1.01)return;
+    viewportWidth=innerWidth;viewportHeight=innerHeight;
+    root.style.height=`${viewportHeight}px`;paint(paintedTime);
+  }
+  function scheduleLayout(){if(!layoutFrame)layoutFrame=requestAnimationFrame(layout)}
+  function rotate(){touchY=null;scheduleLayout()}
   function finish(displayedTime=video.currentTime){
     if(disposed||!playing())return;
     video.pause();cancelFrame();playRequest++;stopIndex=targetIndex;
@@ -149,7 +159,7 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     targetIndex=stopIndex=0;target=INTRO_END;handoffStart=null;
     root.dataset.painted='false';root.dataset.atmosphere='false';
     root.dataset.mediaSource=source.blob?'buffered':'direct';
-    root.dataset.mediaQuality=loadAttempt<=2?'4k':'1080p';
+    root.dataset.mediaQuality=source.quality;
     setMode('intro');paint(0);
     if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=''}
     // Do not require a complete fetch + blob URL before playback. Native media
@@ -188,12 +198,13 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
     if(Math.abs(wheelDistance)>=32){wheelTriggered=true;step(Math.sign(wheelDistance));wheelDistance=0}
   }
   function touchstart(event:TouchEvent){
+    if(event.target instanceof Element&&event.target.closest('a,button,input,textarea,select')){touchY=null;return}
     const content=event.target instanceof Element?event.target.closest<HTMLElement>('.content-frame'):null;
     if(content&&content.scrollHeight>content.clientHeight+2){touchY=null;return}
     if(event.touches.length!==1){touchY=null;return}
     touchY=event.touches[0].clientY;touchX=event.touches[0].clientX;
   }
-  function touchmove(event:TouchEvent){if(touchY!==null&&event.touches.length===1)event.preventDefault()}
+  function touchmove(event:TouchEvent){if(event.touches.length!==1){touchY=null;return}if(touchY!==null)event.preventDefault()}
   function touchend(event:TouchEvent){
     if(touchY===null)return;
     const touch=event.changedTouches[0],delta=touchY-touch.clientY;touchY=null;
@@ -203,6 +214,8 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function touchcancel(){touchY=null}
   function keydown(event:KeyboardEvent){
     const element=event.target instanceof Element?event.target:null;
+    const content=element?.closest<HTMLElement>('.content-frame');
+    if(content&&content.scrollHeight>content.clientHeight+2&&['ArrowDown','ArrowUp','PageDown','PageUp',' '].includes(event.key))return;
     if(event.altKey||event.ctrlKey||event.metaKey||element?.closest('input,textarea,select,[contenteditable=true]'))return;
     if(event.key===' '&&element?.closest('button,a'))return;
     if(!['ArrowDown','PageDown',' ','ArrowUp','PageUp','Home','End'].includes(event.key))return;
@@ -214,19 +227,21 @@ export function mountScrollFilm({root,video,onScene,onMode,onReady,onError,onFra
   function preference(){location.reload()}
   video.addEventListener('loadedmetadata',metadata);video.addEventListener('loadeddata',data);
   video.addEventListener('seeked',seeked);video.addEventListener('error',fail);video.addEventListener('timeupdate',timeupdate);
-  addEventListener('wheel',wheel,{passive:false});addEventListener('resize',layout);
-  addEventListener('orientationchange',layout);addEventListener('keydown',keydown);
+  addEventListener('wheel',wheel,{passive:false});addEventListener('resize',scheduleLayout);
+  visual?.addEventListener('resize',scheduleLayout);
+  addEventListener('orientationchange',rotate);addEventListener('keydown',keydown);
   addEventListener('touchstart',touchstart,{passive:true});addEventListener('touchmove',touchmove,{passive:false});
   addEventListener('touchend',touchend);addEventListener('touchcancel',touchcancel);
   reduce.addEventListener('change',preference);
   root.dataset.reduced=String(reduced);setMode(reduced?'idle':'intro');layout();
   if(reduced){onReady();paint(target)}else void load();
   return {goTo,next:()=>step(1),replayIntro,resume,retry,dispose:()=>{
-    disposed=true;playRequest++;loadToken++;clearTimeout(loadTimer);controller?.abort();cancelAnimationFrame(raf);cancelFrame();video.pause();
+    disposed=true;playRequest++;loadToken++;clearTimeout(loadTimer);controller?.abort();cancelAnimationFrame(raf);cancelAnimationFrame(layoutFrame);cancelFrame();video.pause();
     video.removeEventListener('loadedmetadata',metadata);video.removeEventListener('loadeddata',data);
     video.removeEventListener('seeked',seeked);video.removeEventListener('error',fail);video.removeEventListener('timeupdate',timeupdate);
     video.removeAttribute('src');video.load();if(blobUrl)URL.revokeObjectURL(blobUrl);
-    removeEventListener('wheel',wheel);removeEventListener('resize',layout);removeEventListener('orientationchange',layout);removeEventListener('keydown',keydown);
+    removeEventListener('wheel',wheel);removeEventListener('resize',scheduleLayout);removeEventListener('orientationchange',rotate);removeEventListener('keydown',keydown);
+    visual?.removeEventListener('resize',scheduleLayout);
     removeEventListener('touchstart',touchstart);removeEventListener('touchmove',touchmove);removeEventListener('touchend',touchend);removeEventListener('touchcancel',touchcancel);
     reduce.removeEventListener('change',preference);
   }};

@@ -22,6 +22,7 @@ export default function Home() {
  const player=useRef<ReturnType<typeof mountScrollFilm>|null>(null);
  const [scene,setScene]=useState<Scene>('intro'),[ready,setReady]=useState(false),[failed,setFailed]=useState(false);
  const [mode,setMode]=useState<FilmMode>('intro');
+ useEffect(()=>{const content=root.current?.querySelector<HTMLElement>('.content-frame');if(content)content.scrollTop=0},[scene]);
  useEffect(()=>{
   if(!root.current||!video.current||!foreground.current||!atmosphere.current)return;
   const ambient=createFilmAtmosphere(root.current,atmosphere.current,foreground.current,video.current);

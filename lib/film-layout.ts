@@ -5,8 +5,12 @@ export const CONTENT_FRACTION=3036/3840;
 /** UI follows the viewport. Size the film separately so the portrait keeps
  * its proportions while wider screens use the available width. */
 export function filmLayout(width:number,height:number,time:number){
+ width=Math.max(1,width);height=Math.max(1,height);
  const portrait=width<height;
- const compositionScale=portrait?Math.max(.62,Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT)):Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT);
+ // Phones use real CSS pixels and reflowed content, not a miniature desktop.
+ // Keep this condition paired with the compact CSS media query.
+ const compact=width<=600||(width<=1000&&height<=600);
+ const compositionScale=compact?1:portrait?Math.max(.75,Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT)):Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT);
  const compositionHeight=height;
  const compositionWidth=width;
  const compositionTop=0;
@@ -24,5 +28,5 @@ export function filmLayout(width:number,height:number,time:number){
  const eased=blend*blend*(3-2*blend);
  const filmWidth=introWidth+(artworkWidth/CONTENT_FRACTION-introWidth)*eased;
  const filmTop=(height-introWidth*9/16)/2*(1-eased)+artworkTop*eased;
- return {compositionScale,compositionWidth,compositionHeight,compositionTop,uiWidth,uiHeight,artworkWidth,artworkHeight,filmWidth,filmTop};
+ return {compact,compositionScale,compositionWidth,compositionHeight,compositionTop,uiWidth,uiHeight,artworkWidth,artworkHeight,filmWidth,filmTop};
 }

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {filmLayout, CONTENT_FRACTION} from '../lib/film-layout.ts';
-for(const [width,height] of [[1440,1024],[1440,778],[1920,1080],[2560,1080],[1366,768],[844,390],[768,1024],[390,844],[375,667],[320,568]]){
+for(const [width,height] of [[1440,1024],[1440,778],[1920,1080],[2560,1080],[1366,768],[844,390],[768,1024],[390,844],[375,667],[320,568],[360,800],[412,915],[430,932],[393,852],[600,960],[568,320],[932,430],[915,412],[820,1180]]){
  const fit=filmLayout(width,height,8.7);
+ if(width<=600||(width<=1000&&height<=600))assert.equal(fit.compositionScale,1,'Phone text and touch targets use real CSS pixels');
  assert.equal(fit.compositionWidth,width,'UI spans the browser width, without a centered inset artboard');
  assert.equal(fit.compositionHeight,height,'UI uses the available viewport height');
  assert.equal(fit.compositionTop,0,'UI is anchored to the viewport');
@@ -15,4 +16,4 @@ for(const [width,height] of [[1440,1024],[1440,778],[1920,1080],[2560,1080],[136
 const figma=filmLayout(1440,1024,8.7);
 assert.equal(figma.compositionScale,1);
 assert.equal(figma.artworkWidth,1440);
-console.log('PASS: full viewport UI, original video proportions, width-filling landscape film, contained intro at ten viewport sizes');
+console.log('PASS: 19 viewport sizes, portrait/landscape phone text scale, original video proportions and contained intro');

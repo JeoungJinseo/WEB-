@@ -3,10 +3,10 @@ import {mountScrollFilm,INTRO_END,SCENE_STOPS} from '../lib/scroll-film.ts';
 globalThis.Element=class Element {};
 const atStop=(actual,expected,message)=>assert.ok(Math.abs(Math.floor(actual*24+1e-6)-Math.round(expected*24))<=1,message||`Expected ${actual} to hold at ${expected}`);
 const flush=async()=>{for(let i=0;i<32;i++)await Promise.resolve()};
-async function setup({reduce=false,blocked=false,error=false,mediaError,frameCallbacks=false}={}){
+async function setup({reduce=false,blocked=false,error=false,mediaError,frameCallbacks=false,width=1440,height=900}={}){
  let now=1000,rafId=0;const frames=new Map(),events=new EventTarget();
  Object.defineProperty(globalThis,'performance',{value:{now:()=>now},configurable:true});
- Object.assign(globalThis,{innerWidth:1440,innerHeight:900,scrollTo:()=>{},
+ Object.assign(globalThis,{innerWidth:width,innerHeight:height,scrollTo:()=>{throw new Error('Resize must not force page scroll')},
   matchMedia:()=>Object.assign(new EventTarget(),{matches:reduce}),
   addEventListener:events.addEventListener.bind(events),removeEventListener:events.removeEventListener.bind(events),
   requestAnimationFrame:fn=>{frames.set(++rafId,fn);return rafId},cancelAnimationFrame:id=>frames.delete(id),
@@ -30,6 +30,25 @@ async function setup({reduce=false,blocked=false,error=false,mediaError,frameCal
  async function run(ms){for(let elapsed=0;elapsed<ms;elapsed+=20){now+=20;if(!video.paused){video.time+=.02*video.playbackRate;video.dispatchEvent(new Event('timeupdate'));if(frameCallbacks){const mediaTime=Math.floor(video.time*24)/24;if(mediaTime!==lastPresented){lastPresented=mediaTime;const callbacks=[...delivered.values()];delivered.clear();callbacks.forEach(fn=>fn(now,{mediaTime}))}}}const pending=[...frames.values()];frames.clear();for(const fn of pending)fn(now);await flush()}}
  const wheel=delta=>emit('wheel',{deltaY:delta,deltaX:0,deltaMode:0,ctrlKey:false});
  return {video,root,film,scenes,handoffs,run,wheel,emit,frames};
+}
+{
+ const h=await setup({width:390,height:844});
+ assert.equal(h.root.dataset.mediaQuality,'1080p','Phones start with the lighter existing movie');
+ assert.ok(h.video.src.includes('hero-compatible.mp4'));
+ await h.run(5000);h.film.goTo(SCENE_STOPS[1]);await h.run(2700);
+ const time=h.root.dataset.time,seeks=h.video.seeks.length,plays=h.video.plays;
+ Object.assign(globalThis,{innerWidth:844,innerHeight:390});h.emit('orientationchange');h.emit('resize');await h.run(50);
+ assert.equal(h.root.dataset.time,time,'Rotation retains the displayed scene');
+ assert.equal(h.video.seeks.length,seeks,'Rotation never seeks or restarts');assert.equal(h.video.plays,plays);
+ Object.assign(globalThis,{innerHeight:340});h.emit('resize');await h.run(50);
+ assert.equal(h.root.dataset.time,time,'Browser-bar height changes preserve the scene');
+ h.emit('touchstart',{touches:[{clientY:300,clientX:100}]});
+ h.emit('touchmove',{touches:[{clientY:250,clientX:100},{clientY:100,clientX:200}]});
+ h.emit('touchend',{changedTouches:[{clientY:150,clientX:100}]});await h.run(100);
+ assert.equal(h.root.dataset.time,time,'A pinch cannot accidentally advance a scene');
+ h.emit('touchstart',{touches:[{clientY:300,clientX:100}]});h.emit('orientationchange');await h.run(50);
+ h.emit('touchend',{changedTouches:[{clientY:150,clientX:100}]});await h.run(100);
+ assert.equal(h.root.dataset.time,time,'Rotation cancels an unfinished swipe');h.film.dispose();
 }
 {
  const h=await setup();assert.equal(h.video.paused,false,'intro starts without scrolling');h.wheel(100);

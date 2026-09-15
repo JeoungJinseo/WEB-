@@ -10,6 +10,9 @@ export const images = [
   './oven-sauna/20260915/07-sign.png',
   './oven-sauna/20260915/08-gather.png',
   './oven-sauna/20260915/09-curved.png',
+  './oven-sauna/20260915/10-heat-waves.png',
+  './oven-sauna/20260915/11-oven-sauna.png',
+  './oven-sauna/20260915/12-goob.png',
 ];
 
 // Originals remain intact in a 4:5 atlas. The material cover-fits each tile

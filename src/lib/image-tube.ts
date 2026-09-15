@@ -13,6 +13,9 @@ export const tubeArtworks = [
   { src: '/oven-sauna/20260915/07-sign.png', title: 'SIGN' },
   { src: '/oven-sauna/20260915/08-gather.png', title: 'GATHER IN' },
   { src: '/oven-sauna/20260915/09-curved.png', title: 'CURVED' },
+  { src: '/oven-sauna/20260915/10-heat-waves.png', title: 'HEAT WAVES' },
+  { src: '/oven-sauna/20260915/11-oven-sauna.png', title: 'OVEN SAUNA' },
+  { src: '/oven-sauna/20260915/12-goob.png', title: 'GOOB!' },
 ];
 export interface TubeMotion {
   target: number; current: number; velocity: number; angle: number;

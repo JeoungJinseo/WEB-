@@ -17,29 +17,14 @@ export const cylinderFragment = /* glsl */ `
   precision highp float;
 
   uniform sampler2D tMap;
-  uniform float uImageCount;
-  uniform float uImageRepeat;
-  uniform vec2 uAtlasSize;
   uniform float uDarkness; // 0.0 = normal, 1.0 = fully black
 
   varying vec2 vUv;
 
   void main() {
-    // The original cylinder's U direction mirrors artwork on the outside.
-    // Flip within each tile on front faces so the same graphic reads correctly
-    // both outside the ring and during the camera's flight through its interior.
-    float panelCount = uImageCount * uImageRepeat;
-    float panel = min(floor(vUv.x * panelCount), panelCount - 1.0);
-    float tileU = vUv.x * panelCount - panel;
-    if (gl_FrontFacing) tileU = 1.0 - tileU;
-    float tile = mod(panel, uImageCount);
-    // The geometry already matches the artwork aspect; use every pixel.
-    vec2 artworkUv = vec2((tile + tileU) / uImageCount, vUv.y);
-    // Keep bilinear filtering inside this tile at both visible edges.
-    vec2 halfTexel = 0.5 / uAtlasSize;
-    artworkUv = clamp(artworkUv,
-      vec2(tile / uImageCount, 0.0) + halfTexel,
-      vec2((tile + 1.0) / uImageCount, 1.0) - halfTexel);
+    // Use the whole original image up to the physical panel edges.
+    // Both sides stay readable as the camera passes inside the ring.
+    vec2 artworkUv = vec2(gl_FrontFacing ? 1.0 - vUv.x : vUv.x, vUv.y);
     vec4 tex = texture2D(tMap, artworkUv);
 
     // Darken the texture

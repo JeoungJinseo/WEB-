@@ -10,8 +10,8 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollSmoother } from 'gsap/ScrollSmoother';
 import { CustomEase } from 'gsap/CustomEase';
-import { images, perspectives, cylinderConfig, particleConfig, imageConfig, imageRepeat } from '@/lib/variant-1/data';
-import { drawImageContain, createCylinderGeometry, createParticleGeometry } from '@/lib/variant-1/utils';
+import { images, perspectives, cylinderConfig, particleConfig, imageRepeat } from '@/lib/variant-1/data';
+import { createCylinderGeometry, createParticleGeometry } from '@/lib/variant-1/utils';
 import { cylinderVertex, cylinderFragment, particleVertex, particleFragment } from '@/lib/variant-1/shaders';
 import type { ParticleMesh } from '@/lib/variant-1/types';
 import Loader from '@/components/loader';
@@ -72,9 +72,10 @@ export function CylinderCarousel() {
     let reversingTouch = false;
     let timeline: gsap.core.Timeline | undefined;
     let renderer: Renderer | undefined;
-    let texture: Texture | undefined;
+    const artworkTextures: Texture[] = [];
+    const artworkPanels: Mesh[] = [];
     let steamTexture: Texture | undefined;
-    let cylinder: Mesh | undefined;
+    let cylinder: Transform | undefined;
     let camera: Camera | undefined;
     let scene: Transform | undefined;
     const particles: ParticleMesh[] = [];
@@ -229,27 +230,27 @@ export function CylinderCarousel() {
         cameraPosition.z = size.cameraZ;
         cameraPosition.fov = size.fov;
         scene = new Transform();
-        const atlas = document.createElement('canvas');
-        const ctx = atlas.getContext('2d', { alpha: false })!;
-        const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), size.width <= 1023 || size.height <= 600 ? 4096 : 8192);
-        const unit = Math.max(1, Math.floor(Math.min(imageConfig.width / 4, imageConfig.height / 5, limit / (images.length * 4), limit / 5)));
-        atlas.width = unit * 4 * images.length;
-        atlas.height = unit * 5;
-        ctx.fillStyle = '#080000';
-        ctx.fillRect(0, 0, atlas.width, atlas.height);
-        ctx.imageSmoothingQuality = 'high';
-        loaded.forEach((image, index) => drawImageContain(ctx, image, index * unit * 4, 0, unit * 4, atlas.height));
-        texture = new Texture(gl, { image: atlas, wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
-          minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
+        // Each artwork owns its complete texture and a curved panel. There is
+        // no filled atlas, contain padding, border surface, or end cap.
+        cylinder = new Transform();
+        cylinder.setParent(scene);
+        const panelCount = Math.round(images.length * imageRepeat);
+        for (let panel = 0; panel < panelCount; panel++) {
+          const image = loaded[panel % loaded.length];
+          const texture = new Texture(gl, { image, flipY: false,
+            wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
+            minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
+          artworkTextures.push(texture);
+          const program = new Program(gl, { vertex: cylinderVertex, fragment: cylinderFragment,
+            uniforms: { tMap: { value: texture }, uDarkness: { value: .3 } }, cullFace: null });
+          const mesh = new Mesh(gl, {
+            geometry: createCylinderGeometry(gl, cylinderConfig, panel, panelCount), program,
+          });
+          mesh.setParent(cylinder);
+          artworkPanels.push(mesh);
+        }
         steamTexture = new Texture(gl, { image: smokeImage, wrapS: gl.CLAMP_TO_EDGE, wrapT: gl.CLAMP_TO_EDGE,
           minFilter: gl.LINEAR, magFilter: gl.LINEAR, generateMipmaps: false });
-        const program = new Program(gl, { vertex: cylinderVertex, fragment: cylinderFragment,
-          uniforms: {
-            tMap: { value: texture }, uImageCount: { value: images.length }, uImageRepeat: { value: imageRepeat },
-            uAtlasSize: { value: [atlas.width, atlas.height] }, uDarkness: { value: .3 },
-          }, cullFace: null });
-        cylinder = new Mesh(gl, { geometry: createCylinderGeometry(gl, cylinderConfig), program });
-        cylinder.setParent(scene);
         cylinder.rotation.y = .5;
         cylinder.scale.set(size.scale, size.scale, size.scale);
         for (let i = 0; i < particleConfig.numParticles; i++) {
@@ -438,9 +439,8 @@ export function CylinderCarousel() {
       returnToTube.current = () => {};
       transition.current.ready = false;
       particles.forEach(particle => { particle.geometry.remove(); particle.program.remove(); });
-      cylinder?.geometry.remove();
-      cylinder?.program.remove();
-      if (renderer && texture) renderer.gl.deleteTexture(texture.texture);
+      artworkPanels.forEach(panel => { panel.geometry.remove(); panel.program.remove(); });
+      if (renderer) artworkTextures.forEach(texture => renderer!.gl.deleteTexture(texture.texture));
       if (renderer && steamTexture) renderer.gl.deleteTexture(steamTexture.texture);
     };
   }, []);

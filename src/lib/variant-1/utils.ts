@@ -2,29 +2,6 @@ import { Geometry, type OGLRenderingContext } from 'ogl';
 import type { CylinderConfig, ParticleConfig, Perspective } from './types';
 
 /**
- * Draws the entire image with object-fit: contain behavior. Both axes use the
- * same scale; any fractional spare space stays in the atlas background.
- */
-export function drawImageContain(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-) {
-  const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
-  const drawWidth = img.naturalWidth * scale;
-  const drawHeight = img.naturalHeight * scale;
-
-  ctx.save();
-  ctx.translate(x, y + h);
-  ctx.scale(1, -1);
-  ctx.drawImage(img, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
-  ctx.restore();
-}
-
-/**
  * Returns Tailwind classes for positioning text based on perspective position
  */
 export function getPositionClasses(position: Perspective['position']): string {
@@ -50,44 +27,43 @@ export function getPositionClasses(position: Perspective['position']): string {
   }
 }
 
-/**
- * Creates cylinder geometry with positions, UVs, and indices
- */
-export function createCylinderGeometry(gl: WebGLRenderingContext, config: CylinderConfig) {
+/** A panel follows the original polygon exactly, including shared boundaries. */
+export function createCylinderGeometry(gl: WebGLRenderingContext, config: CylinderConfig, panel = 0, panelCount = 1) {
   const { radius, height, radialSegments, heightSegments } = config;
-
+  const start = panel / panelCount;
+  const end = (panel + 1) / panelCount;
+  const columns = [start];
+  for (let x = 1; x < radialSegments; x++) {
+    const u = x / radialSegments;
+    if (u > start && u < end) columns.push(u);
+  }
+  columns.push(end);
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
-
   for (let y = 0; y <= heightSegments; y++) {
     const v = y / heightSegments;
-    const yPos = (v - 0.5) * height;
-
-    for (let x = 0; x <= radialSegments; x++) {
-      const u = x / radialSegments;
-      const theta = u * Math.PI * 2;
-
-      const xPos = Math.cos(theta) * radius;
-      const zPos = Math.sin(theta) * radius;
-
-      positions.push(xPos, yPos, zPos);
-      uvs.push(u, 1 - v);
+    for (const u of columns) {
+      const segment = u * radialSegments;
+      const first = Math.floor(segment);
+      const fraction = segment - first;
+      const a = first / radialSegments * Math.PI * 2;
+      const b = (first + 1) / radialSegments * Math.PI * 2;
+      positions.push(
+        radius * (Math.cos(a) + (Math.cos(b) - Math.cos(a)) * fraction),
+        (v - .5) * height,
+        radius * (Math.sin(a) + (Math.sin(b) - Math.sin(a)) * fraction),
+      );
+      uvs.push((u - start) * panelCount, 1 - v);
     }
   }
-
   for (let y = 0; y < heightSegments; y++) {
-    for (let x = 0; x < radialSegments; x++) {
-      const a = y * (radialSegments + 1) + x;
-      const b = a + radialSegments + 1;
-      const c = a + 1;
-      const d = b + 1;
-
-      indices.push(a, b, c);
-      indices.push(b, d, c);
+    for (let x = 0; x < columns.length - 1; x++) {
+      const a = y * columns.length + x;
+      const b = a + columns.length;
+      indices.push(a, b, a + 1, b, b + 1, a + 1);
     }
   }
-
   return new Geometry(gl as unknown as OGLRenderingContext, {
     position: { size: 3, data: new Float32Array(positions) },
     uv: { size: 2, data: new Float32Array(uvs) },

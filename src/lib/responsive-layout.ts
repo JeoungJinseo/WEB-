@@ -1,3 +1,5 @@
+import { cylinderConfig } from './variant-1/data';
+
 /** Shared opening layout for the two renderers, in CSS pixels. */
 export function captionColumn(width: number, height: number, safeLeft = 0, safeRight = 0) {
   const compact = width <= 1023 || height <= 600;
@@ -23,8 +25,8 @@ export function fitOpening({ width, height, scale, fov, cameraZ, headerHeight, c
   const gap = column.compact ? 16 : Math.min(48, Math.max(24, height * .042));
   const availableHeight = Math.max(1, bottom - top);
   const imageHeight = Math.max(1, availableHeight - (column.sideBySide ? 0 : captionHeight + gap));
-  const radius = 2.5 * scale;
-  const halfHeight = scale;
+  const radius = cylinderConfig.radius * scale;
+  const halfHeight = cylinderConfig.height * scale / 2;
   const tangent = Math.max(Math.tan(fov * Math.PI / 360),
     height * halfHeight / (imageHeight * (cameraZ - radius)),
     height * radius / (column.ringWidth * Math.sqrt(cameraZ ** 2 - radius ** 2)));

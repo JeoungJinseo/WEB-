@@ -19,8 +19,6 @@ export const cylinderFragment = /* glsl */ `
   uniform sampler2D tMap;
   uniform float uImageCount;
   uniform float uImageRepeat;
-  uniform float uPanelAspect;
-  uniform float uArtworkAspect;
   uniform vec2 uAtlasSize;
   uniform float uDarkness; // 0.0 = normal, 1.0 = fully black
 
@@ -35,19 +33,14 @@ export const cylinderFragment = /* glsl */ `
     float tileU = vUv.x * panelCount - panel;
     if (gl_FrontFacing) tileU = 1.0 - tileU;
     float tile = mod(panel, uImageCount);
-    // Contain the whole original; never trim its printed edges.
-    float fit = uPanelAspect / uArtworkAspect;
-    vec2 panelUv = (vec2(tileU, vUv.y) - 0.5)
-      * vec2(max(1.0, fit), 1.0 / min(1.0, fit)) + 0.5;
-    float inside = step(0.0, panelUv.x) * step(panelUv.x, 1.0)
-      * step(0.0, panelUv.y) * step(panelUv.y, 1.0);
-    vec2 artworkUv = vec2((tile + panelUv.x) / uImageCount, panelUv.y);
+    // The geometry already matches the artwork aspect; use every pixel.
+    vec2 artworkUv = vec2((tile + tileU) / uImageCount, vUv.y);
     // Keep bilinear filtering inside this tile at both visible edges.
     vec2 halfTexel = 0.5 / uAtlasSize;
     artworkUv = clamp(artworkUv,
       vec2(tile / uImageCount, 0.0) + halfTexel,
       vec2((tile + 1.0) / uImageCount, 1.0) - halfTexel);
-    vec4 tex = mix(vec4(8.0 / 255.0, 0.0, 0.0, 1.0), texture2D(tMap, artworkUv), inside);
+    vec4 tex = texture2D(tMap, artworkUv);
 
     // Darken the texture
     tex.rgb *= (1.0 - uDarkness);

@@ -5,6 +5,7 @@ import { BufferAttribute, DoubleSide, DynamicDrawUsage, ExtrudeGeometry, Group, 
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { tubeArtworks, tubeConfig, tubeRingSpeedFactor, tubeRowSpeed, type TubeMotion } from '@/lib/image-tube';
 import { advanceTransition, panelCoordinates, scrollTransition, transitionEase, type TubeTransition } from '@/lib/tube-transition';
+import { cylinderConfig } from '@/lib/variant-1/data';
 import '@/oven-sauna.css';
 import './oven-image-tube.css';
 
@@ -35,7 +36,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     }
     return { row, col, baseRow, panel, texture, aspect, geometry,
       coordinates: new Float32Array(geometry.attributes.uv.array),
-      gather: { value: 0 }, fit: { value: 1 }, endAngle: null as number | null, layoutRevision: -1,
+      gather: { value: 0 }, endAngle: null as number | null, layoutRevision: -1,
     };
   }), [textures]);
   useEffect(() => () => cards.forEach(card => card.geometry.dispose()), [cards]);
@@ -64,8 +65,8 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     perspective.projectionMatrix.elements[8] = endpoint.shiftX * lens;
     perspective.projectionMatrix.elements[9] = endpoint.shift * lens;
     perspective.projectionMatrixInverse.copy(perspective.projectionMatrix).invert();
-    const outerRadius = 4 + (2.5 * endpoint.scale - 4) * gather;
-    const outerHeight = 1 + (2 * endpoint.scale - 1) * gather;
+    const outerRadius = 4 + (cylinderConfig.radius * endpoint.scale - 4) * gather;
+    const outerHeight = 1 + (cylinderConfig.height * endpoint.scale - 1) * gather;
     const recess = transitionEase(.015, .38, progress);
     cards.forEach((card, id) => {
       if (card.layoutRevision !== transition.current.layoutRevision) {
@@ -84,8 +85,7 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
       const layerScale = radius / outerRadius;
       const height = outerHeight * layerScale;
       card.gather.value = gather;
-      const width = (outerHeight * card.aspect * (1 - gather) + (2 * Math.PI * 2.5 * endpoint.scale / 12) * gather) * layerScale;
-      card.fit.value = width / (height * card.aspect);
+      const width = (outerHeight * card.aspect * (1 - gather) + (2 * Math.PI * cylinderConfig.radius * endpoint.scale / tubeConfig.columns) * gather) * layerScale;
       const thetaStart = (card.col + (card.baseRow % 2 ? .5 : 0)) / 12 * Math.PI * 2
         - motion.current.angle * (tubeRowSpeed(card.baseRow) - tubeRingSpeedFactor);
       const thetaEnd = (card.panel + .5) / 12 * Math.PI * 2 - .5;
@@ -130,19 +130,13 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
     <meshBasicMaterial map={card.texture} side={DoubleSide} toneMapped={false} depthWrite depthTest
       onBeforeCompile={shader => {
         shader.uniforms.uGather = card.gather;
-        shader.uniforms.uFit = card.fit;
-        shader.fragmentShader = 'uniform float uGather; uniform float uFit;\n' + shader.fragmentShader;
-        // Match the final cylinder's contain fit throughout convergence.
-        // Opaque spare space prevents nested cards from showing through.
-        const uv = 'vec2(((gl_FrontFacing ? vMapUv.x : 1.0-vMapUv.x)-.5)*max(1.0,uFit)+.5,(vMapUv.y-.5)/min(1.0,uFit)+.5)';
-        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
-          `vec2 ovenArtworkUv = ${uv};\n` + ShaderChunk.map_fragment.replaceAll('vMapUv', 'clamp(ovenArtworkUv, 0.0, 1.0)'));
-        shader.fragmentShader = shader.fragmentShader.replace('#include <colorspace_fragment>', `#include <colorspace_fragment>
-          float ovenInside = step(0.0, ovenArtworkUv.x) * step(ovenArtworkUv.x, 1.0)
-            * step(0.0, ovenArtworkUv.y) * step(ovenArtworkUv.y, 1.0);
-          gl_FragColor.rgb = mix(vec3(8.0 / 255.0, 0.0, 0.0), gl_FragColor.rgb, ovenInside);
-          gl_FragColor.rgb *= mix(1.0, .7, uGather);`);
-      }} customProgramCacheKey={() => 'oven-tube-contain-convergence'} />
+        shader.fragmentShader = 'uniform float uGather;\n' + shader.fragmentShader;
+        // The panel itself morphs to the artwork aspect. Sample the full image
+        // on both faces throughout gathering, with no artificial border.
+        const uv = 'vec2(gl_FrontFacing ? vMapUv.x : 1.0-vMapUv.x, vMapUv.y)';
+        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', ShaderChunk.map_fragment.replaceAll('vMapUv', uv));
+        shader.fragmentShader = shader.fragmentShader.replace('#include <colorspace_fragment>', '#include <colorspace_fragment>\ngl_FragColor.rgb *= mix(1.0, .7, uGather);');
+      }} customProgramCacheKey={() => 'oven-tube-artwork-proportions'} />
   </mesh>)}</group>;
 }
 

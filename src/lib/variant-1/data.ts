@@ -15,8 +15,8 @@ export const images = [
   './oven-sauna/20260915/12-goob.png',
 ];
 
-// Originals remain intact in a 4:5 atlas. Each panel contains the full
-// artwork at its original proportions, with spare space in the dark surface.
+// The ring panels share the originals' 4:5 aspect, so the whole artwork
+// reaches the physical edges without cropping or added borders.
 export const imageConfig = { width: 480, height: 600 };
 // Keep the same twelve panels as artworks are added; cycle the collection within them.
 export const imageRepeat = 12 / images.length;
@@ -50,8 +50,8 @@ export const perspectives: Perspective[] = [
 
 export const cylinderConfig = {
   radius: 2.5,
-  // Preserve the reference ring's silhouette; fit image UVs independently.
-  height: 2,
+  // Arc width / artwork aspect makes each of the twelve panels a 4:5 image.
+  height: (2 * Math.PI * 2.5) / (12 * (imageConfig.width / imageConfig.height)),
   radialSegments: 64,
   heightSegments: 1,
 };

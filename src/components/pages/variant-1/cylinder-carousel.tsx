@@ -459,7 +459,7 @@ export function CylinderCarousel() {
       <SaunaAtmosphere />
       <OvenFrame chapter={chapter} onNavigate={navigate} />
       <div className="sauna-scene" aria-label="OVEN SAUNA 원통형 그래픽 갤러리">
-        {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="스티커, 티켓, 표지판, 눈, 유리 포스터, 수건 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA 스티커 그래픽" />}
+        {hasWebGL ? <canvas ref={canvasRef} role="img" aria-label="OVEN SAUNA의 아홉 가지 그래픽으로 이루어진 회전하는 원통" /> : <img className="sauna-fallback" src={images[0]} alt="OVEN SAUNA — BEYOND THE HEAT 그래픽" />}
       </div>
       <div className="sauna-copy" aria-hidden={tubeIntro}>
         {perspectives.map((perspective, index) => (

@@ -1,16 +1,15 @@
 import type { Perspective } from './types';
 
 export const images = [
-  './oven-sauna/01-sticker.png',
-  './oven-sauna/02-ticket.png',
-  './oven-sauna/03-sign.png',
-  './oven-sauna/04-eye.png',
-  './oven-sauna/05-steam.png',
-  './oven-sauna/06-towel.png',
-  './oven-sauna/07-tile.png',
-  './oven-sauna/08-goob.png',
-  './oven-sauna/09-gather.png',
-  './oven-sauna/10-sauna.png',
+  './oven-sauna/20260915/01-beyond-heat.png',
+  './oven-sauna/20260915/02-shine-later.png',
+  './oven-sauna/20260915/03-steam.png',
+  './oven-sauna/20260915/04-wind-down.png',
+  './oven-sauna/20260915/05-towel.png',
+  './oven-sauna/20260915/06-sauna.png',
+  './oven-sauna/20260915/07-sign.png',
+  './oven-sauna/20260915/08-gather.png',
+  './oven-sauna/20260915/09-curved.png',
 ];
 
 // Originals remain intact in a 4:5 atlas. The material cover-fits each tile

@@ -4,16 +4,15 @@ export const tubeConfig = { radius: 4, rows: 5, columns: 12, repeats: 3, rowSpac
 export const tubeRowSpeed = (row: number) => .65 + (row % tubeConfig.rows) / 4 * .9;
 export const tubeRingSpeedFactor = tubeRowSpeed(Math.floor(tubeConfig.rows * tubeConfig.repeats / 2));
 export const tubeArtworks = [
-  { src: '/oven-sauna/01-sticker.png', title: 'STICKER' },
-  { src: '/oven-sauna/02-ticket.png', title: 'TICKET' },
-  { src: '/oven-sauna/03-sign.png', title: 'SIGN' },
-  { src: '/oven-sauna/04-eye.png', title: 'EYE' },
-  { src: '/oven-sauna/05-steam.png', title: 'STEAM' },
-  { src: '/oven-sauna/06-towel.png', title: 'TOWEL' },
-  { src: '/oven-sauna/07-tile.png', title: 'TILE' },
-  { src: '/oven-sauna/08-goob.png', title: 'GOOB!' },
-  { src: '/oven-sauna/09-gather.png', title: 'GATHER IN' },
-  { src: '/oven-sauna/10-sauna.png', title: 'SAUNA' },
+  { src: '/oven-sauna/20260915/01-beyond-heat.png', title: 'BEYOND THE HEAT' },
+  { src: '/oven-sauna/20260915/02-shine-later.png', title: 'SWEAT NOW, SHINE LATER' },
+  { src: '/oven-sauna/20260915/03-steam.png', title: 'STEAM' },
+  { src: '/oven-sauna/20260915/04-wind-down.png', title: 'HEAT UP, WIND DOWN' },
+  { src: '/oven-sauna/20260915/05-towel.png', title: 'TOWEL' },
+  { src: '/oven-sauna/20260915/06-sauna.png', title: 'SAUNA' },
+  { src: '/oven-sauna/20260915/07-sign.png', title: 'SIGN' },
+  { src: '/oven-sauna/20260915/08-gather.png', title: 'GATHER IN' },
+  { src: '/oven-sauna/20260915/09-curved.png', title: 'CURVED' },
 ];
 export interface TubeMotion {
   target: number; current: number; velocity: number; angle: number;

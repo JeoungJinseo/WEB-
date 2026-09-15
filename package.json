@@ -1,0 +1,12 @@
+{
+  "name": "goobne-oven-sauna",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Responsive GOOBNE OVEN SAUNA interactive website",
+  "scripts": {
+    "test": "node --test tools/test_hosted_media.cjs tools/test_hosted_lifecycle.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

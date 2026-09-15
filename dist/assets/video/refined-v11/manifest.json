@@ -1,0 +1,59 @@
+{
+  "version": "refined-v11",
+  "fps": 30,
+  "frames": 225,
+  "duration": 7.5,
+  "lastFrameTime": 7.466666666666667,
+  "anchors": [
+    0.0,
+    3.7,
+    7.433333333333334
+  ],
+  "reverseAnchors": [
+    0.03333333333333333,
+    3.7666666666666666,
+    7.466666666666667
+  ],
+  "anchorFrames": [
+    0,
+    111,
+    223
+  ],
+  "sourceDimensions": [
+    4320,
+    3072
+  ],
+  "sourceCadenceFps": 24,
+  "originalSourceBaseFrame": 95,
+  "method": "Original source pictures; no optical-flow or neural in-between frames. Consecutive action pictures at 30 fps, condensed near-static intervals.",
+  "clothRepair": "Cotton-only inset support; original feather/garment boundary retained",
+  "cameraCutSourceFrames": [
+    314,
+    315
+  ],
+  "steamOcclusionSourceFrames": [
+    302,
+    327
+  ],
+  "bFrames": 0,
+  "mediaRevision": 11,
+  "doorRepair": "Full glass plate from original picture 12; opening width follows mullion, continuously rejoins tracked closed pane at picture 12; isolated reflection excluded from actual hand; native YUV correction; both directions.",
+  "playbackRevision": 11,
+  "arrivalEdit": {
+    "scene": 2,
+    "oldFrame": 224,
+    "newFrame": 223,
+    "reason": "The final original picture has a renewed jump after the preceding pictures settle. Stop on picture 223; reverse begins at its corresponding picture. This anchor remains unchanged in V11."
+  },
+  "routeFileFrames": {
+    "forward-to-interaction": 112,
+    "forward": 224,
+    "reverse-to-interaction": 114,
+    "reverse": 225
+  },
+  "terminalPlayback": "Every selected route file ends physically at its arrival anchor, including the interaction boundary. The 33 ms EOF clock is accepted as the held final picture.",
+  "mediaDirectory": "assets/video/door-v9",
+  "mediaCacheRevision": 3,
+  "refinement": "Native-resolution bidirectional temporal outlier cleanup, protected contours and anchors; rigid red-cloth logo repair; no intermediate frames added.",
+  "colourPipeline": "Explicit limited-range BT.709 matrix/primaries and IEC 61966-2-1 transfer on raw input, encoder output and bitstream; posters extracted from tagged native master."
+}

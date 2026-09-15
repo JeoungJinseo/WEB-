@@ -1,0 +1,70 @@
+@font-face{font-family:Pretendard;src:url("assets/fonts/pretendard-bold.otf") format("opentype");font-weight:700;font-display:swap}
+@font-face{font-family:SaunaHighman;src:url("assets/fonts/highman.otf") format("opentype");font-display:swap}
+@font-face{font-family:Pretendard;src:url("assets/fonts/pretendard.otf") format("opentype");font-weight:400;font-display:swap}
+:root{--bg:#090604;--red:#fb0102;--ink:#f1f1f1;--ease:cubic-bezier(.625,.05,0,1);--parallax:cubic-bezier(.7,.05,.13,1);--ui-scale:1;--ui-width:1440px;--ui-height:1024px;--picture-width:1440px;--picture-top:0px;color-scheme:dark;background:var(--bg);color:var(--ink);font-family:Utendo,Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+@font-face{font-family:Utendo;src:url('assets/fonts/utendo.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:Utendo;src:url('assets/fonts/utendo-bold.ttf') format('truetype');font-weight:700;font-display:swap}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}button,a{-webkit-tap-highlight-color:transparent}a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer;color:inherit}button:disabled{cursor:default}button[hidden],[hidden]{display:none!important}button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:7px}p,h1,h2{margin:0}img{display:block}button{border:0}main{width:100%;height:100dvh;touch-action:pan-x pinch-zoom;overscroll-behavior:none}.stage{isolation:isolate;position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+.film-layer{position:absolute;inset:0;z-index:0;pointer-events:none}.film-media,.poster{position:absolute;left:50%;top:var(--picture-top);width:var(--picture-width);height:auto;aspect-ratio:45/32;max-width:none;object-fit:contain;transform:translateX(-50%);pointer-events:none}.poster{opacity:0}.poster.is-current{opacity:1}.film-media{opacity:0}.has-frame .film-media{opacity:1}.has-frame .poster{opacity:0}
+.composition{position:absolute;left:0;top:0;width:var(--ui-width);height:var(--ui-height);transform:scale(var(--ui-scale));transform-origin:0 0;pointer-events:none}.chrome-frame{z-index:20}.content-frame{z-index:5}.site-header{position:absolute;inset:0;height:110px;opacity:0;transition:opacity .4s var(--ease)}.site-header.is-active{opacity:1;pointer-events:auto}.brand{position:absolute;left:4.3472%;top:25.5px;display:flex;align-items:center;gap:13.1px}.brand-symbol{display:block;padding:8px}.brand-symbol img{width:42.5px;height:39.3px;transform:rotate(-45deg);max-width:none}.brand-wordmark{width:174.56px;height:auto}.nav{position:absolute;left:28%;right:28%;top:36.19px;display:flex;justify-content:space-between;align-items:center;gap:0;white-space:nowrap;font-size:15px;font-weight:700}.nav a,.nav button{background:transparent;border:0;padding:17px 0;position:relative;color:#c4c4c4;display:block}.nav a.active{color:#fff}.nav a.active::after{content:'';position:absolute;left:-4px;right:-4px;bottom:6px;background:#fff;height:2px;transform-origin:left;animation:underline-in .8s var(--ease) both}.nav>.reveal{margin-bottom:-8px;padding-bottom:8px}.contact-wrap{position:absolute;right:4.8958%;top:42.19px;border-radius:100px}.pill{display:block;border:0;border-radius:100px;background:#000;color:var(--red);text-align:center;transition:background-color .3s,color .3s}.contact{width:143.048px;min-width:0;padding:12.021px;font-size:18.031px;white-space:nowrap}.pill:not(:disabled):hover{background:var(--red);color:#000}
+.reveal{display:block;overflow:hidden;margin-bottom:-.06em;padding-bottom:.06em}.reveal>span{display:block;transform:translateY(110%);transition:transform .6s var(--ease);will-change:transform}.is-active .reveal>span{transform:translate(0,0);transition-duration:1.2s;transition-delay:calc(var(--order,0)*70ms)}main[data-mode=transition] .is-active .reveal>span{transition-duration:.8s;transition-delay:calc(var(--order,0)*40ms)}.rolling{display:block;position:relative;overflow:hidden;line-height:1.35}.rolling>span{display:block;transition:transform .8s var(--ease)}.rolling>span+span{position:absolute;inset:0;transform:translateY(-110%)}a:hover .rolling>span:first-child,button:not(:disabled):hover .rolling>span:first-child{transform:translateY(110%)}a:hover .rolling>span+span,button:not(:disabled):hover .rolling>span+span{transform:translateY(0)}
+.scene-panel{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s var(--ease)}.scene-panel.is-active{opacity:1}.scene-copy{position:absolute;left:4.65278%;top:var(--copy-top,65.625%);width:calc(100% - 9.65278%);pointer-events:none}.scene-title{font-family:Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;font-weight:700;font-size:106.873px;line-height:1.24;letter-spacing:-2.1375px;white-space:nowrap}.scene-title .reveal{padding-bottom:.06em;margin-bottom:-.06em}.scene-body{margin-top:45px;max-width:min(850px,59%);font-family:Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;font-size:19.335px;line-height:1.52;letter-spacing:-.3867px;font-weight:400;word-break:keep-all}.scene-statement{position:absolute;right:4.9882%;top:83.3984%;width:590px;text-align:right;font-family:Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;font-size:25.78px;line-height:1.52;letter-spacing:-.5156px}.scene-body .reveal,.scene-statement .reveal{white-space:nowrap}.scene-copy,.scene-statement{text-shadow:0 1px 6px #0003}
+.scroll-hint{position:absolute;left:50%;bottom:max(6px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:12px;background:none;border:0;padding:4px 12px;color:#c4c4c4;font-size:10px;letter-spacing:.12em;white-space:nowrap;transition:opacity .35s var(--ease),visibility .35s}.scroll-hint.is-hidden{opacity:0;visibility:hidden;pointer-events:none}.scroll-hint .hint-arrow{font-size:18px;animation:hint-move 2s var(--ease) infinite}.film-progress{position:absolute;bottom:0;left:0;right:0;height:2px;background:#ffffff09;z-index:40;pointer-events:none}.film-progress span{display:block;height:100%;background:var(--red);transform:scaleX(var(--progress,0));transform-origin:left}.load-status{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);z-index:40;font-size:11px;letter-spacing:.05em;background:#0008;padding:10px 16px;border-radius:40px;transition:opacity .3s}.load-status.is-done{opacity:0;pointer-events:none}.retry-button{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);z-index:40;background:#100907;color:#eee;border:1px solid #ffffff40;border-radius:100px;padding:10px 20px;font-size:13px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.debug{position:fixed;left:12px;bottom:12px;z-index:100;white-space:pre;background:#000d;font:11px/1.5 monospace;padding:12px;color:#ddd;pointer-events:none}.skip-link{position:fixed;top:-100px;left:16px;z-index:100;background:#000;padding:12px}.skip-link:focus{top:16px}
+dialog{color:#eee;background:#100b08;border:1px solid #58483c;max-width:500px;width:calc(100% - 40px);padding:48px 36px}dialog::backdrop{background:#000b;backdrop-filter:blur(4px)}.dialog-close{position:absolute;right:14px;top:10px;background:none;font-size:30px}.dialog-eyebrow{font-size:11px;color:#aaa;letter-spacing:2px}dialog h2{font-size:44px;line-height:1.08;margin:24px 0}dialog p{font-size:15px;line-height:1.7}dialog a{display:inline-block;margin-top:24px;color:#ff514b}.intro-noscript{position:fixed;inset:0;z-index:100;background:#090604;display:grid;place-items:center;text-align:center}.intro-noscript img{width:100%;height:100%;object-fit:contain}.intro-noscript p{position:absolute;bottom:5%}
+@keyframes underline-in{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes hint-move{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@media(max-aspect-ratio:1){.site-header{height:160px}.brand{left:5%;top:24px;gap:8px}.brand-symbol{padding:5px}.brand-symbol img{width:34px;height:34px}.brand-wordmark{width:174.56px}.contact-wrap{top:29px;right:5%}.contact{width:auto;padding:13px 20px;font-size:17px}.nav{top:100px;left:5%;right:5%;font-size:18px}.scene-copy{left:5%;top:59%;width:90%}.scene-title{font-size:clamp(44px,calc(var(--ui-width)*.097),78px);line-height:1.2;letter-spacing:-1.5px}.scene-body{margin-top:28px;max-width:100%;font-size:21px;line-height:1.48;letter-spacing:-.3px}.scene-body .reveal{white-space:normal}.scene-statement{top:auto;bottom:8.5%;left:5%;right:5%;width:90%;font-size:22px;line-height:1.5;text-align:left}.scene-statement .reveal{white-space:normal}.scroll-hint{bottom:max(8px,env(safe-area-inset-bottom))}.load-status{bottom:14%}}
+@media(max-height:500px) and (min-aspect-ratio:1){.scroll-hint{left:auto;right:10px;transform:none}.scroll-hint>span:first-child{font-size:9px}.scroll-hint .hint-arrow{font-size:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal>span{transform:none!important}}
+
+/* Smooth V2: fill from the first paint, never animate the video box geometry. */
+.film-media,.poster{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;object-fit:cover;object-position:50% 38%;transform:none!important;max-width:none}
+.film-media{opacity:0;transition:opacity 180ms linear;will-change:opacity}
+.has-frame .film-media{opacity:0}.has-frame .film-media.is-visible{opacity:1}
+.poster{z-index:0}.film-dim{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,0) 38%,rgba(0,0,0,.05) 48%,rgba(0,0,0,.25) 62%,rgba(0,0,0,.52) 77%,rgba(0,0,0,.76) 100%)}
+.top-dim{position:absolute;inset:0 0 auto;height:19%;z-index:2;pointer-events:none;background:linear-gradient(rgba(0,0,0,.34),rgba(0,0,0,0))}
+.scene-copy,.scene-statement{text-shadow:0 2px 12px rgba(0,0,0,.42)}
+
+@media(max-aspect-ratio:1){.film-media,.poster{object-position:50% 27%}.film-dim{background:linear-gradient(transparent 29%,rgba(0,0,0,.12) 44%,rgba(0,0,0,.63) 66%,rgba(0,0,0,.89) 100%)}.scene-title{font-size:clamp(42px,calc(var(--ui-width)*.094),75px)}}
+@media(prefers-reduced-motion:reduce){.film-media{display:none}.poster.is-current,.has-frame .poster.is-current{opacity:1}}
+
+/* V3: source pixels untouched; steam/foliage are separate runtime layers below text scrims. */
+#ambient{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;contain:strict}
+.film-media{image-rendering:auto;backface-visibility:hidden}
+.load-status{pointer-events:none}
+
+
+/* V4: opaque original-image composite only during idle, below the established dim. */
+#ambient{z-index:1;opacity:0;transition:opacity .18s linear;contain:strict;backface-visibility:hidden}
+
+.film-media{transition:opacity 120ms linear}
+
+
+
+/* Crisp live type replaces the small PNG with its baked gray rectangle. */
+.brand-wordmark{display:flex;flex-direction:column;width:174.56px;background:none;gap:7px;color:#fff}
+.brand-wordmark strong{font:400 26.38px/1.02 SaunaHighman,sans-serif;white-space:nowrap;text-indent:-.04em}
+.brand-wordmark small{font:400 13.02px/1.19 Utendo,sans-serif;color:#e7e3df;white-space:nowrap}
+/* Preserve photograph detail under the reading area. */
+.film-dim{background:linear-gradient(180deg,transparent 42%,rgba(0,0,0,.04) 53%,rgba(0,0,0,.22) 74%,rgba(0,0,0,.58) 100%)}
+.top-dim{background:linear-gradient(rgba(0,0,0,.22),transparent)}
+.film-media{transition:none;will-change:auto}
+#ambient{transition:opacity .10s linear}
+/* Shared motion language with oven-sauna-ddp: masked rise and stagger. */
+.scene-panel{transition:opacity .45s var(--ease)}
+.scene-panel .reveal>span{transition:transform .6s var(--ease);will-change:transform}
+.scene-panel.is-active .reveal>span{transition-duration:1.2s;transition-delay:calc(var(--order,0)*70ms)}
+main[data-mode=transition] .scene-panel.is-active .reveal>span,
+main[data-mode=settling] .scene-panel.is-active .reveal>span{transition-duration:.8s;transition-delay:calc(var(--order,0)*40ms)}
+#ambient{transition:none}
+@media(max-aspect-ratio:1){.film-dim{background:linear-gradient(transparent 35%,rgba(0,0,0,.14) 50%,rgba(0,0,0,.48) 76%,rgba(0,0,0,.72) 100%)}}
+
+/* Small compositor-only particles complement the independently moving steam. */
+#ambient-motes{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;contain:strict}
+#ambient-motes i{position:absolute;left:var(--x);top:var(--y);width:3px;height:3px;border-radius:50%;background:#f5c895;box-shadow:0 0 7px 2px #efa66135;animation:sauna-mote var(--duration) linear var(--delay) infinite;will-change:transform,opacity}
+@keyframes sauna-mote{0%{transform:translate3d(0,22px,0);opacity:0}20%{opacity:.42}75%{opacity:.28}100%{transform:translate3d(var(--drift),-110px,0);opacity:0}}
+@media(prefers-reduced-motion:reduce){#ambient-motes{display:none}}
+
+/* Finish outgoing masks before the 280 ms photo handoff reaches native video. */
+main[data-mode=transition] .scene-panel:not(.is-active){transition-duration:.20s}
+main[data-mode=transition] .scene-panel:not(.is-active) .reveal>span{transition-duration:.22s;transition-delay:0s}
+main[data-mode=transition][data-motion-phase=playing] .content-frame{visibility:hidden}

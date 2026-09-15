@@ -17,12 +17,16 @@ export function filmLayout(width:number,height:number,time:number){
  const uiWidth=width/compositionScale,uiHeight=height/compositionScale;
  const artworkWidth=portrait?Math.max(width,Math.min(width*2.1,height*1.1)):Math.min(width,height*1.95);
  const artworkHeight=artworkWidth/CONTENT_FRACTION*9/16;
- // Keep the head near the top. Only the lower background/body may extend
- // beyond a wide viewport; the UI and credits never share that crop.
- const baseTop=portrait?height*.06:Math.min(0,(height-artworkHeight)*.055);
+ // Leave room under the phone navigation. Native footage, held frames and
+ // the compositor all use this placement, so a handoff cannot shift the head.
+ const phonePortrait=compact&&portrait;
+ const phoneOffset=phonePortrait?36:0;
+ const baseTop=portrait?height*.06+phoneOffset:Math.min(0,(height-artworkHeight)*.055);
  const front=Math.min(1,Math.max(0,(time-10.8)/3));
  const frontEase=front*front*(3-2*front);
- const artworkTop=!portrait&&width/height>1.5?baseTop+(height*.02-baseTop)*frontEase:baseTop;
+ // The front character is taller; ease its crest below the same navigation.
+ const frontTop=phonePortrait?Math.max(baseTop,(height<=560?88:100)+12):!portrait&&width/height>1.5?height*.02:baseTop;
+ const artworkTop=baseTop+(frontTop-baseTop)*frontEase;
  const introWidth=Math.min(width,height*16/9);
  const blend=Math.min(1,Math.max(0,(time-3.2)/.7));
  const eased=blend*blend*(3-2*blend);

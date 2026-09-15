@@ -15,7 +15,7 @@ function Collab({red=false}:{red?:boolean}) {
 }
 function Team(){return <div className="team">
  <div className="team-row"><span><small>Team Leader / Art Director</small> Kim Gwanwu</span><span><small>BRANDING / UX MANAGER</small> JEOUMG JINSEO</span><span><small>INTERACTION / GRAPHIC DESIGNER</small> JEONG JUNYONG</span></div>
- <div className="team-row secondary"><span><small>JEOUMG JINSEO</small> <small>JEOUMG JINSEO</small> JEOUMG JINSExO</span><span><small>JEOUMG JINSEO</small> <small>JEOUMG JINSEO</small> JEOUMG JINSEO</span></div>
+ <div className="team-row secondary"><span><small>Industrial Designer</small> Yoon Ga-won</span><span><small>Industrial Designer</small> Choi Eun-seo</span></div>
  </div>}
 export default function Home() {
  const root=useRef<HTMLElement>(null),video=useRef<HTMLVideoElement>(null),foreground=useRef<HTMLCanvasElement>(null),atmosphere=useRef<HTMLCanvasElement>(null);
@@ -67,7 +67,7 @@ export default function Home() {
     <Reveal order={6}><p className="motto">SWEAT OUT, GATHER IN</p></Reveal><Reveal order={7}><Team/></Reveal>
    </footer>
    </div>
-   <div className="composition corner-frame"><div className={`corners ${!intro&&!profile?'is-active':''}`} aria-hidden="true"><span className="corner left">{scene==='front'?'SWEAT OUT, GATHER IN':'GOOBNE OVEN SAUNA'}</span><span className="corner right">{scene==='front'?'SWEAT OUT, GATHER IN':'2026 DDP YOUNG DESIGNER'}</span></div></div>
+   <div className="composition corner-frame"><div className={`corners ${!intro&&!profile?'is-active':''}`} aria-hidden="true"><span className="corner left">GOOBNE OVEN SAUNA</span><span className="corner right">DDP YOUNG DESIGNER</span></div></div>
    <button className={`scroll-hint ${intro?'on-intro':''} ${(mode==='intro'||mode==='transition'||mode==='settling')&&ready?'is-hidden':''}`} disabled={!ready||mode==='intro'||mode==='transition'||mode==='settling'} onClick={()=>mode==='blocked'?player.current?.resume():jump(scene==='front'?0:scene==='back'?8.7:profile?14.2:4.3)} aria-label={mode==='blocked'?'영상 재생':scene==='front'?'인트로부터 다시 재생':'다음 장면 재생'}><span>{!ready?'LOADING FILM':mode==='blocked'?'PLAY FILM':scene==='front'?'BACK TO START':'SCROLL FOR NEXT SCENE'}</span><span className="hint-arrow">{mode==='blocked'?'▶':scene==='front'?'↑':'↓'}</span></button>
    {failed&&<button className="media-error" onClick={()=>{setFailed(false);setReady(false);player.current?.retry()}}>영상 다시 연결</button>}
    <div className="film-progress" aria-hidden="true"><span/></div>

@@ -108,6 +108,8 @@ video.film-media,.film-poster{filter:url(#source-red)}
 .media-error{top:max(12px,env(safe-area-inset-top));bottom:auto;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);border:1px solid #ffffff26;border-radius:100px;background:#000c;color:#eee;font-size:12px;line-height:1.4;padding:8px 14px}
 @media(max-aspect-ratio:1/1){.media-error{top:calc(160px * var(--composition-scale) + 8px)}}
 
+.desktop-lines{display:contents}.mobile-lines{display:none}
+
 /* Phones keep the same visual hierarchy with a compact header and a fixed
    3 + 2 credit grid. Content fits the stage instead of enlarging the footer. */
 @media(max-width:600px),(max-width:1000px) and (max-height:600px){
@@ -126,24 +128,29 @@ video.film-media,.film-poster{filter:url(#source-red)}
  .nav>.reveal{min-width:0;padding:0;margin:0;overflow:visible}
  .nav .active:after{bottom:3px;left:0;right:0}
  .content-frame{inset:0;width:100%;height:100dvh;transform:none;padding:0;display:block;overflow:hidden;pointer-events:none;background:none;touch-action:pan-x pinch-zoom}
- .scene-copy{display:none!important;position:absolute;inset:auto;transform:none;height:auto;max-width:none;margin:0;transition:opacity .3s var(--ease)}
- .scene-copy.is-active{display:block!important}
+ /* Keep inactive text laid out so each masked line has a previous transform
+    to animate from. display:none skips the entrance on mobile browsers. */
+ .scene-copy{display:block!important;position:absolute;inset:auto;transform:none;height:auto;max-width:none;margin:0;visibility:hidden;transition:opacity .45s var(--ease),visibility 0s .45s}
+ .scene-copy.is-active{visibility:visible;transition-delay:0s}
+ .desktop-lines{display:none}.mobile-lines{display:contents}
  .back-copy{--mobile-copy-height:calc(70px + (100vw - 2 * var(--mobile-gutter)) / 4.3631);top:min(43%,calc(100% - var(--mobile-footer) - var(--mobile-copy-height) - 20px));left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter))}
- .back-copy.is-active{display:flex!important;flex-direction:column;justify-content:flex-start;gap:26px}
+ .back-copy{display:flex!important;flex-direction:column;justify-content:flex-start;gap:26px}
  .back-copy>.collab{transform:none}.back-copy h1{margin:0;width:100%}
  .collab{gap:10px}.collab p,.front-copy .collab p{font-size:9.5px;line-height:14px;letter-spacing:.01em}
  .collab img,.front-copy .collab img{width:clamp(190px,57vw,250px);height:auto}
  .front-copy .collab img{filter:brightness(0) invert(1)}
- .profile-copy{top:calc(var(--mobile-header) + 28px);left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter))}
+ .profile-copy{top:calc(var(--mobile-header) + 28px);bottom:76px;left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter))}
  .project-intro{position:static;width:100%;margin:0}
- .project-intro h2{font-size:clamp(22px,6.2vw,30px);line-height:1.24;letter-spacing:-.025em}
+ .project-intro h2{font-size:clamp(22px,6.2vw,30px);line-height:1.2;letter-spacing:-.025em}
  .read-more{width:134px;min-height:40px;margin-top:20px;padding:11px 16px;font-size:14px}
- .disciplines{position:static;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;font-size:12px;line-height:1.5}
- .front-copy{top:max(calc(var(--mobile-header) + 22px),min(36%,calc(100% - var(--mobile-footer) - 230px)));left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter));padding:0;text-align:left}
- .about-body{margin:24px 0 0;max-width:100%;font-size:13px;line-height:1.65;word-break:keep-all;overflow-wrap:anywhere}
- .about-body p+p{margin-top:16px}.about-body .reveal{display:inline;overflow:visible;padding:0;margin:0}.about-body .reveal>span{display:inline}.about-body .reveal+.reveal:before{content:' '}
- .credits{display:none;position:absolute;top:auto;bottom:calc(50px + env(safe-area-inset-bottom));left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter));transform:none;margin:0;padding:0;text-align:center}
- .credits.is-active{display:block}
+ .disciplines{position:absolute;inset:auto 0 0;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 20px;font-size:12px;line-height:1.5}
+ .front-copy{top:auto;bottom:calc(var(--mobile-footer) + 24px);left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter));padding:0;text-align:center}
+ .about-body{margin:24px auto 0;max-width:100%;font-size:clamp(12px,3.3vw,14px);line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}
+ .about-body p+p{margin-top:18px}
+ .about-body .reveal{display:block;overflow:hidden;padding-bottom:.06em;margin-bottom:-.06em}
+ .about-body .reveal>span{display:block}.about-body .reveal+.reveal:before{content:none}
+ .credits{display:block;visibility:hidden;position:absolute;top:auto;bottom:calc(50px + env(safe-area-inset-bottom));left:var(--mobile-gutter);width:calc(100% - 2 * var(--mobile-gutter));transform:none;margin:0;padding:0;text-align:center;transition:opacity .4s var(--ease),visibility 0s .4s}
+ .credits.is-active{visibility:visible;transition-delay:0s}
  .motto{font-size:11px;line-height:16px}
  .team{font-size:clamp(8.5px,2.45vw,10px);line-height:12px;gap:6px;margin-top:10px;white-space:nowrap;color:#979797;align-items:center}
  .team-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
@@ -167,20 +174,23 @@ video.film-media,.film-poster{filter:url(#source-red)}
  .film-page{--mobile-header:calc(88px + env(safe-area-inset-top));--mobile-footer:calc(124px + env(safe-area-inset-bottom))}
  .brand,.site-header>.reveal{top:calc(6px + env(safe-area-inset-top))}.nav{top:calc(46px + env(safe-area-inset-top))}
  .back-copy.is-active{gap:20px}.back-copy{--mobile-copy-height:calc(64px + (100vw - 2 * var(--mobile-gutter)) / 4.3631)}
- .front-copy{top:calc(var(--mobile-header) + 16px)}.about-body{margin-top:18px;font-size:12px;line-height:1.55}.about-body p+p{margin-top:12px}
+ .front-copy{top:auto;bottom:calc(var(--mobile-footer) + 16px)}.about-body{margin-top:18px;font-size:11.5px;line-height:1.5}.about-body p+p{margin-top:14px}
  .credits{bottom:calc(46px + env(safe-area-inset-bottom))}.team{margin-top:8px}
- .profile-copy{top:calc(var(--mobile-header) + 16px)}.project-intro h2{font-size:22px}.read-more{margin-top:14px}.disciplines{margin-top:20px;gap:8px}
+ .profile-copy{top:calc(var(--mobile-header) + 16px);bottom:74px}.project-intro h2{font-size:19px}.read-more{margin-top:14px}.disciplines{gap:8px}
+ .profile-wordmark{bottom:28%}
 }
 /* Landscape phones and enlarged text can scroll a bounded content area. */
 @media(max-width:1000px) and (max-height:450px){
  .film-page{--mobile-header:calc(86px + env(safe-area-inset-top));touch-action:pan-y pinch-zoom}
  .brand,.site-header>.reveal{top:calc(5px + env(safe-area-inset-top))}.nav{top:calc(44px + env(safe-area-inset-top));justify-content:space-between}
  .content-frame{top:var(--mobile-header);height:calc(100dvh - var(--mobile-header) - 54px - env(safe-area-inset-bottom));padding:16px var(--mobile-gutter);display:flex;flex-direction:column;gap:26px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;pointer-events:auto;touch-action:pan-y pinch-zoom}
- .scene-copy{position:relative!important;inset:auto!important;width:100%;flex:none}
+ .scene-copy{position:absolute!important;inset:16px var(--mobile-gutter) auto!important;width:calc(100% - 2 * var(--mobile-gutter));flex:none}
+ .scene-copy.is-active{position:relative!important;inset:auto!important;width:100%}
  .back-copy.is-active{max-width:400px;align-self:center;gap:18px}.back-copy .collab img{width:210px}
  .profile-copy.is-active{display:grid!important;grid-template-columns:minmax(0,1.5fr) minmax(140px,1fr);gap:24px;align-items:center}
- .project-intro h2{font-size:22px}.disciplines{margin:0}
+ .project-intro h2{font-size:22px}.disciplines{position:static;margin:0}
  .front-copy{max-width:660px;align-self:center}.about-body{font-size:13px}
- .credits{position:static;inset:auto;width:min(100%,440px);align-self:center;flex:none;margin:0}
+ .credits{position:absolute;inset:auto;width:min(100%,440px);align-self:center;flex:none;margin:0}
+ .credits.is-active{position:static}
  .profile-wordmark{bottom:16%}
 }

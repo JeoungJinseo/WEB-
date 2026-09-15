@@ -7,6 +7,9 @@ import {RED_CHANNEL_MATRIX,SOURCE_RED_TABLES} from '../lib/film-color';
 function Reveal({children,order=0,className=''}:{children:ReactNode;order?:number;className?:string}) {
  return <span className={`reveal ${className}`} style={{'--order':order} as CSSProperties}><span>{children}</span></span>;
 }
+function CopyLines({desktop,mobile,order=0,mobileOrder=order}:{desktop:string[];mobile:string[];order?:number;mobileOrder?:number}) {
+ return <><span className="desktop-lines">{desktop.map((line,i)=><Reveal key={line} order={order+i}>{line}</Reveal>)}</span><span className="mobile-lines">{mobile.map((line,i)=><Reveal key={line} order={mobileOrder+i}>{line}</Reveal>)}</span></>;
+}
 function Rolling({children}:{children:string}) {
  return <span className="rolling"><span>{children}</span><span aria-hidden="true">{children}</span></span>;
 }
@@ -58,11 +61,11 @@ export default function Home() {
     <Collab/><h1><Reveal order={3}><img className="hero-wordmark" src="./assets/wordmark.svg" alt="OVEN SAUNA"/></Reveal></h1>
    </section>
    <section className={`profile-copy scene-copy ${profile?'is-active':''}`} inert={!profile} aria-hidden={!profile} data-figma-node="1009:974">
-    <div className="project-intro"><h2>{['Every experience','begins at Goobne. We roast','exactly what you crave —','the Goobne way.'].map((line,i)=><Reveal key={line} order={i}>{line}</Reveal>)}</h2><Reveal order={5}><button className="read-more pill" onClick={()=>jump(14.2)}><Rolling>Read more</Rolling></button></Reveal></div>
+    <div className="project-intro"><h2><CopyLines desktop={['Every experience','begins at Goobne. We roast','exactly what you crave —','the Goobne way.']} mobile={['Every experience','begins at Goobne.','We roast exactly','what you crave —','the Goobne way.']}/></h2><Reveal order={5}><button className="read-more pill" onClick={()=>jump(14.2)}><Rolling>Read more</Rolling></button></Reveal></div>
     <ul className="disciplines">{['Branding','UX Interaction','Motion Graphic','Product Design'].map((label,i)=><li key={label}><Reveal order={i+2}>{label}</Reveal></li>)}</ul>
    </section>
    <section className={`front-copy scene-copy ${scene==='front'?'is-active':''}`} inert={scene!=='front'} aria-hidden={scene!=='front'} data-figma-node="1009:1013">
-    <Collab red/><h2 className="sr-only">오븐 사우나 소개</h2><div className="about-body"><p><Reveal order={3}>오븐 사우나는 굽네가 오븐에서 기름을 덜어내는 방식을,</Reveal><Reveal order={4}>사우나에서 땀과 무거움을 비워내는 경험으로 확장한 팝업 공간입니다.</Reveal></p><p><Reveal order={5}>먹는 즐거움과 회복의 감각을 하나로 연결해, 굽네가 지향하는 건강한 식문화를</Reveal><Reveal order={6}>새로운 라이프스타일 경험으로 제안합니다.</Reveal></p></div>
+    <Collab red/><h2 className="sr-only">오븐 사우나 소개</h2><div className="about-body"><p><CopyLines order={3} desktop={['오븐 사우나는 굽네가 오븐에서 기름을 덜어내는 방식을,','사우나에서 땀과 무거움을 비워내는 경험으로 확장한 팝업 공간입니다.']} mobile={['오븐 사우나는 굽네가 오븐에서','기름을 덜어내는 방식을, 사우나에서','땀과 무거움을 비워내는 경험으로','확장한 팝업 공간입니다.']}/></p><p><CopyLines order={5} mobileOrder={7} desktop={['먹는 즐거움과 회복의 감각을 하나로 연결해, 굽네가 지향하는 건강한 식문화를','새로운 라이프스타일 경험으로 제안합니다.']} mobile={['먹는 즐거움과 회복의 감각을 하나로 연결해,','굽네가 지향하는 건강한 식문화를','새로운 라이프스타일 경험으로 제안합니다.']}/></p></div>
    </section>
    <footer className={`credits ${scene==='back'||scene==='front'?'is-active':''}`} aria-hidden={intro||profile}>
     <Reveal order={6}><p className="motto">SWEAT OUT, GATHER IN</p></Reveal><Reveal order={7}><Team/></Reveal>

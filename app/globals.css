@@ -67,6 +67,7 @@ video.film-media,.film-poster{filter:url(#source-red)}
 .contact{width:143.048px;min-width:0;padding:12.021px;font-size:18.031px}
 .back-copy{--copy-height:clamp(349px,calc(349px + (var(--ui-width) - 1440px) * .045),369px);top:min(calc(43.8477% + max(0px,calc(var(--ui-width) - 1440px)) * .08),calc(84.4336% - var(--copy-height) - 18px));left:50%;transform:translateX(-50%);width:67.3926%;height:var(--copy-height);max-width:calc((var(--copy-height) - 78px) * 4.3631);display:flex;flex-direction:column;justify-content:space-between;text-align:center}
 .back-copy h1{margin-top:0;flex-shrink:0}
+.back-copy>.collab{transform:translateY(-18px)}
 .collab{gap:20.183px}.collab p{font-size:15.137px;line-height:1.2}
 .collab img{width:320.994px;height:23.925px}
 .profile-wordmark{left:50%;right:auto;transform:translateX(-50%);width:min(89.59%,calc(var(--ui-height) * 1.66));top:min(65.36%,calc(94.2% - min(calc(var(--ui-width) * .8959),calc(var(--ui-height) * 1.66)) / 4.3631))}

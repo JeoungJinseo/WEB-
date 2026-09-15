@@ -15,8 +15,8 @@ export const images = [
   './oven-sauna/20260915/12-goob.png',
 ];
 
-// Originals remain intact in a 4:5 atlas. The material cover-fits each tile
-// within the reference cylinder, preserving proportions with narrow side crops.
+// Originals remain intact in a 4:5 atlas. Each panel contains the full
+// artwork at its original proportions, with spare space in the dark surface.
 export const imageConfig = { width: 480, height: 600 };
 // Keep the same twelve panels as artworks are added; cycle the collection within them.
 export const imageRepeat = 12 / images.length;

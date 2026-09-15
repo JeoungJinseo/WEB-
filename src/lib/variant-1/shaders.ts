@@ -21,6 +21,7 @@ export const cylinderFragment = /* glsl */ `
   uniform float uImageRepeat;
   uniform float uPanelAspect;
   uniform float uArtworkAspect;
+  uniform vec2 uAtlasSize;
   uniform float uDarkness; // 0.0 = normal, 1.0 = fully black
 
   varying vec2 vUv;
@@ -34,15 +35,19 @@ export const cylinderFragment = /* glsl */ `
     float tileU = vUv.x * panelCount - panel;
     if (gl_FrontFacing) tileU = 1.0 - tileU;
     float tile = mod(panel, uImageCount);
-    // Cover-fit the portrait within the original ring height without stretching.
-    vec2 panelUv = vec2(tileU, vUv.y);
-    if (uPanelAspect < uArtworkAspect) {
-      panelUv.x = (panelUv.x - 0.5) * uPanelAspect / uArtworkAspect + 0.5;
-    } else {
-      panelUv.y = (panelUv.y - 0.5) * uArtworkAspect / uPanelAspect + 0.5;
-    }
+    // Contain the whole original; never trim its printed edges.
+    float fit = uPanelAspect / uArtworkAspect;
+    vec2 panelUv = (vec2(tileU, vUv.y) - 0.5)
+      * vec2(max(1.0, fit), 1.0 / min(1.0, fit)) + 0.5;
+    float inside = step(0.0, panelUv.x) * step(panelUv.x, 1.0)
+      * step(0.0, panelUv.y) * step(panelUv.y, 1.0);
     vec2 artworkUv = vec2((tile + panelUv.x) / uImageCount, panelUv.y);
-    vec4 tex = texture2D(tMap, artworkUv);
+    // Keep bilinear filtering inside this tile at both visible edges.
+    vec2 halfTexel = 0.5 / uAtlasSize;
+    artworkUv = clamp(artworkUv,
+      vec2(tile / uImageCount, 0.0) + halfTexel,
+      vec2((tile + 1.0) / uImageCount, 1.0) - halfTexel);
+    vec4 tex = mix(vec4(8.0 / 255.0, 0.0, 0.0, 1.0), texture2D(tMap, artworkUv), inside);
 
     // Darken the texture
     tex.rgb *= (1.0 - uDarkness);

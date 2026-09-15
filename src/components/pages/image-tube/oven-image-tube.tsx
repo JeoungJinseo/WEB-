@@ -132,11 +132,17 @@ function ArtworkTube({ motion, transition, onHover, onReady }: { motion: MotionR
         shader.uniforms.uGather = card.gather;
         shader.uniforms.uFit = card.fit;
         shader.fragmentShader = 'uniform float uGather; uniform float uFit;\n' + shader.fragmentShader;
-        // Cover-fit in either direction with the same scale on both image axes.
-        const uv = 'vec2(((gl_FrontFacing ? vMapUv.x : 1.0-vMapUv.x)-.5)*min(1.0,uFit)+.5,(vMapUv.y-.5)/max(1.0,uFit)+.5)';
-        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', ShaderChunk.map_fragment.replace('vMapUv', uv));
-        shader.fragmentShader = shader.fragmentShader.replace('#include <colorspace_fragment>', '#include <colorspace_fragment>\ngl_FragColor.rgb *= mix(1.0, .7, uGather);');
-      }} customProgramCacheKey={() => 'oven-tube-convergence'} />
+        // Match the final cylinder's contain fit throughout convergence.
+        // Opaque spare space prevents nested cards from showing through.
+        const uv = 'vec2(((gl_FrontFacing ? vMapUv.x : 1.0-vMapUv.x)-.5)*max(1.0,uFit)+.5,(vMapUv.y-.5)/min(1.0,uFit)+.5)';
+        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+          `vec2 ovenArtworkUv = ${uv};\n` + ShaderChunk.map_fragment.replaceAll('vMapUv', 'clamp(ovenArtworkUv, 0.0, 1.0)'));
+        shader.fragmentShader = shader.fragmentShader.replace('#include <colorspace_fragment>', `#include <colorspace_fragment>
+          float ovenInside = step(0.0, ovenArtworkUv.x) * step(ovenArtworkUv.x, 1.0)
+            * step(0.0, ovenArtworkUv.y) * step(ovenArtworkUv.y, 1.0);
+          gl_FragColor.rgb = mix(vec3(8.0 / 255.0, 0.0, 0.0), gl_FragColor.rgb, ovenInside);
+          gl_FragColor.rgb *= mix(1.0, .7, uGather);`);
+      }} customProgramCacheKey={() => 'oven-tube-contain-convergence'} />
   </mesh>)}</group>;
 }
 

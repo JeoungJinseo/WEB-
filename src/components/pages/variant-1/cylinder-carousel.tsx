@@ -247,7 +247,8 @@ export function CylinderCarousel() {
           uniforms: {
             tMap: { value: texture }, uImageCount: { value: images.length }, uImageRepeat: { value: imageRepeat },
             uPanelAspect: { value: 2 * Math.PI * cylinderConfig.radius / (images.length * imageRepeat * cylinderConfig.height) },
-            uArtworkAspect: { value: imageConfig.width / imageConfig.height }, uDarkness: { value: .3 },
+            uArtworkAspect: { value: imageConfig.width / imageConfig.height },
+            uAtlasSize: { value: [atlas.width, atlas.height] }, uDarkness: { value: .3 },
           }, cullFace: null });
         cylinder = new Mesh(gl, { geometry: createCylinderGeometry(gl, cylinderConfig), program });
         cylinder.setParent(scene);

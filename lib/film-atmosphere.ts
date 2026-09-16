@@ -185,7 +185,12 @@ void main(){
   // A portrait viewport can continue below the source frame. Blend its last
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
-  if(foregroundOnly>.5){gl_FragColor=vec4(finishColor(c.rgb),outside?0.0:subject);return;}
+  if(foregroundOnly>.5){
+    // Give the browser premultiplied pixels: transparent red background must
+    // contain zero RGB, or a compositor can wash out the gradient and logo.
+    float alpha=outside?0.0:subject;
+    gl_FragColor=vec4(finishColor(c.rgb)*alpha,alpha);return;
+  }
   // Clearly visible red-lit vapor, with feathered edges and tall, irregular
   // wisps. Keep the silhouette clear while the flow disperses at the top.
   vec2 vaporUV=sceneUV;
@@ -209,7 +214,7 @@ void main(){
 type Still={source:RegisteredStill;mix:number};
 type Layer={prepare:(source:RegisteredStill)=>void;draw:(breath:number,steam:number,time:number,shade:number,still:Still|null)=>void;dispose:()=>void};
 function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:boolean):Layer|null {
-  const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
+  const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:false});
   if(!gl)return null;
   function compile(type:number,source:string){
     const shader=gl!.createShader(type);if(!shader)throw new Error('shader unavailable');

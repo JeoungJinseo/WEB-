@@ -140,7 +140,7 @@ video.film-media,.film-poster{filter:url(#source-red)}
  /* Lower the project copy as one group; cap the offset on shorter phone screens. */
  .profile-copy{--project-copy-offset:min(calc(44 * var(--mobile-unit)),7dvh);inset:0;width:100%;height:100%}
  .project-intro{position:absolute;top:calc(22.27% + var(--project-copy-offset));left:5%;width:66%;margin:0}
- .project-intro h2{font-size:calc(18 * var(--mobile-unit));line-height:1.22;letter-spacing:-.025em}
+ .project-intro h2{font-size:calc(21 * var(--mobile-unit));line-height:1.22;letter-spacing:-.025em}
  .read-more{width:calc(104 * var(--mobile-unit));min-height:40px;margin-top:calc(18 * var(--mobile-unit));padding:10px;font-size:calc(12 * var(--mobile-unit))}
  .disciplines{position:absolute;top:calc(28.8% + var(--project-copy-offset));right:5%;left:auto;bottom:auto;width:calc(96 * var(--mobile-unit));margin:0;padding:0;display:flex;flex-direction:column;gap:calc(10 * var(--mobile-unit));font-size:calc(9 * var(--mobile-unit));line-height:1.4}
  .front-copy{top:var(--mobile-copy-top);bottom:auto;left:5%;width:90%;padding:0;text-align:center}

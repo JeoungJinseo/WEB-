@@ -3,7 +3,7 @@
 .stage{height:100dvh}
 main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
 
-@media (max-width:900px), (max-aspect-ratio:1/1), (max-height:600px){
+@media (max-width:1024px), (max-aspect-ratio:1/1), (max-height:600px){
   :root{
     --edge-left:max(clamp(16px,4vw,32px),env(safe-area-inset-left));
     --edge-right:max(clamp(16px,4vw,32px),env(safe-area-inset-right));
@@ -79,4 +79,38 @@ main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
   .brand-wordmark strong{font-size:22px}
   .brand-wordmark small{font-size:9px}
   .nav{font-size:.75rem}
+}
+
+/* Mobile keeps all four edges of the original film visible. The native movie,
+   fallback poster and breathing canvas share NativeFilm.pictureRect(). */
+main[data-framing="full"] .film-media,
+main[data-framing="full"] .poster{object-fit:contain;object-position:50% 50%}
+main[data-framing="full"] .film-dim{display:none}
+main[data-framing="full"] .scene-panel{scrollbar-width:thin;scrollbar-color:#ffffff40 transparent}
+main[data-framing="full"] .scene-panel::-webkit-scrollbar{display:block;width:3px}
+main[data-framing="full"] .scene-panel::-webkit-scrollbar-thumb{background:#ffffff40;border-radius:3px}
+
+@media (max-aspect-ratio:1/1){
+  :root{--mobile-film-height:min(calc(100vw * 32 / 45),42dvh);--copy-start:calc(var(--header-space) + var(--mobile-film-height) + 10px)}
+  .film-layer{top:var(--header-space);bottom:auto;height:var(--mobile-film-height)}
+  .top-dim{background:#090604}
+  .content-frame{top:var(--copy-start);height:max(0px,calc(100% - var(--copy-start) - 56px - env(safe-area-inset-bottom)))}
+  .scene-panel{gap:16px;padding-top:8px;padding-bottom:20px}
+  .scene-copy{margin-top:0}
+  .scene-title{font-size:clamp(1.5rem,7vw,2.6rem);line-height:1.2}
+  .scene-body{margin-top:12px;font-size:clamp(.875rem,3.6vw,1rem);line-height:1.55}
+  .scene-statement{font-size:clamp(.875rem,3.6vw,1rem);line-height:1.55}
+  .scroll-hint{background:#090604;border-radius:24px}
+}
+
+/* A landscape phone uses the room beside the film for its readable copy. */
+@media (max-width:1024px) and (min-aspect-ratio:1/1){
+  .film-layer{top:var(--header-space);right:auto;bottom:52px;width:54%;height:auto}
+  .content-frame{left:54%;top:var(--header-space);width:46%;height:calc(100% - var(--header-space) - 56px - env(safe-area-inset-bottom))}
+  .scene-panel{display:flex;gap:14px;padding:8px 18px 20px 10px}
+  .scene-panel::before{display:none}
+  .scene-copy{margin-top:0}
+  .scene-title{font-size:clamp(1.4rem,3vw,1.8rem)}
+  .scene-body,.scene-statement{font-size:.8125rem;line-height:1.5}
+  .scroll-hint{background:#090604;border-radius:24px}
 }

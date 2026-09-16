@@ -160,7 +160,8 @@ test('video selection covers physical screen pixels and preserves full 4K on a 4
   f.setViewport(3840,2160,1);
   assert.match(f.film.candidates(0,1)[0].url,/forward-to-interaction-landscape\.mp4/);
   f.setViewport(319,718,2);
-  assert.match(f.film.candidates(0,1)[0].url,/forward-to-interaction-portrait-display/);
+  assert.match(f.film.candidates(0,1)[0].url,/forward-to-interaction-balanced-display/);
+  assert.deepEqual([...f.film.candidates(0,1)[0].crop],[0,0,1,1]);
   f.film.qualityPreference='max';
   assert.match(f.film.candidates(0,1)[0].url,/forward-to-interaction-4320-hevc\.mp4/);
 });
@@ -237,21 +238,58 @@ test('rotation uses the visible stage size without resetting the current route',
   f.film.root.style={setProperty:()=>{}};
   f.film.root.clientWidth=390;f.film.root.clientHeight=844;
   f.film.qualityPreference='auto';f.film.manifest={anchors:[0,3.7,7.433],reverseAnchors:[.033,3.766,7.466]};
-  f.film.layout();assert.match(f.film.candidates(0,1)[0].url,/portrait/);
+  f.film.layout();assert.match(f.film.candidates(0,1)[0].url,/balanced/);
   f.film.root.clientWidth=844;f.film.root.clientHeight=390;
-  f.film.layout();assert.match(f.film.candidates(0,1)[0].url,/landscape/);
+  f.film.layout();assert.match(f.film.candidates(0,1)[0].url,/balanced/);
   assert.equal(f.film.route,route);assert.equal(f.film.index,0);
   assert.equal(f.events.length,0,'layout must not seek, restart or navigate');
 });
 
-test('large portrait uses native HEVC with a published H.264 fallback',()=>{
+test('portrait delivery preserves all edges and covers rendered physical pixels',()=>{
   const f=fixture();f.setViewport(430,932,3);f.film.qualityPreference='auto';
   f.film.manifest={anchors:[0,3.7,7.433],reverseAnchors:[.033,3.766,7.466]};
   const media=JSON.parse(readFileSync(path.join(__dirname,'../dist/media-map.json'),'utf8'));
   for(const [from,to] of [[0,1],[1,2],[2,1],[1,0]]){
     const choices=f.film.candidates(from,to);
-    assert.match(choices[0].url,/4320-hevc/);assert.match(choices[1].url,/balanced\.mp4/);
+    assert.match(choices[0].url,/balanced-display/);
+    assert.deepEqual([...choices[0].crop],[0,0,1,1]);
+    const [,,w,h]=f.film.pictureRect();
+    assert.ok(2160>=w*430*3&&1536>=h*932*3);
     for(const choice of choices)assert.ok(media[choice.url.split('?')[0]],choice.url);
   }
+  f.film.qualityPreference='max';assert.match(f.film.candidates(0,1)[0].url,/4320-hevc/);
   f.film.hevcUnsupported=true;assert.match(f.film.candidates(0,1)[0].url,/balanced\.mp4/);
+});
+
+test('native video and idle picture share the full mobile film box, including letterboxing',()=>{
+  const f=fixture();f.setViewport(390,844,3);
+  f.film.root.getBoundingClientRect=()=>({left:0,top:0});
+  f.film.root.querySelector=()=>({getBoundingClientRect:()=>({left:0,top:110,width:390,height:260})});
+  const [x,y,w,h]=f.film.pictureRect();
+  assert.ok(x>=0&&x+w<=1&&y>=0&&y+h<=1);
+  assert.ok(Math.abs(w*390/(h*844)-45/32)<1e-9);
+  assert.ok(Math.abs(y*844-110)<1e-9);assert.ok(Math.abs(h*844-260)<1e-9);
+  assert.ok(x>0,'contain adds side margins when the box is shorter than the movie');
+});
+
+test('a full captured frame remains usable in a contained viewport',()=>{
+  const c=vm.createContext({});
+  vm.runInContext(readFileSync(path.join(__dirname,'../dist/atmosphere-v12.js'),'utf8')+'\nthis.Atmosphere=SaunaAtmosphere;',c);
+  const a=Object.assign(Object.create(c.Atmosphere.prototype),{rect:[.02,.15,.96,.32],capturedCrop:[0,0,1,1]});
+  assert.equal(a.captureFits(),true);
+  a.capturedCrop=[.3,0,.4,1];assert.equal(a.captureFits(),false,'a portrait crop cannot replace the complete composition');
+});
+
+test('arrival normalizes once through an sRGB canvas before texture upload and frees the canvas',()=>{
+  const calls=[],video={videoWidth:3240,videoHeight:2304},snapshot={};
+  snapshot.getContext=(type,options)=>{calls.push([type,options]);return {drawImage:(...args)=>calls.push(['draw',...args])};};
+  const c=vm.createContext({document:{createElement:()=>snapshot}});
+  vm.runInContext(readFileSync(path.join(__dirname,'../dist/atmosphere-v12.js'),'utf8')+'\nthis.Atmosphere=SaunaAtmosphere;',c);
+  const a=Object.assign(Object.create(c.Atmosphere.prototype),{canvas:{dataset:{}},photo:{
+    gl:{MAX_TEXTURE_SIZE:1,getParameter:()=>8192},texture:source=>{assert.equal(source,snapshot);assert.equal(source.width,3240);assert.equal(source.height,2304);return 'normalized-texture';}
+  }});
+  assert.equal(a.captureTexture(video),'normalized-texture');
+  assert.equal(calls[0][0],'2d');assert.equal(calls[0][1].colorSpace,'srgb');
+  assert.deepEqual(calls[1],['draw',video,0,0,3240,2304]);
+  assert.equal(snapshot.width,1);assert.equal(snapshot.height,1);
 });

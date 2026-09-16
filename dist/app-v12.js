@@ -32,7 +32,7 @@ const title=document.createElement(i===0?'h1':'h2');title.className='scene-title
 const body=document.createElement('p');body.className='scene-body';copyReveals(body,s.body,2);
 const statement=document.createElement('p');statement.className='scene-statement';copyReveals(statement,s.statement,3);
 copy.append(title,body);section.append(copy,statement);$('#scene-panels').append(section);return section;});
-const compactLayout=matchMedia('(max-width: 900px), (max-aspect-ratio: 1/1), (max-height: 600px)');
+const compactLayout=matchMedia('(max-width: 1024px), (max-aspect-ratio: 1/1), (max-height: 600px)');
 function syncReadingMode(){
   const active=panels.find(p=>p.classList.contains('is-active'));
   const overflow=!!active&&compactLayout.matches&&active.scrollHeight>active.clientHeight+2;

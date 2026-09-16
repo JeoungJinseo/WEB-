@@ -42,7 +42,14 @@ class NativeFilm {
   }
   listen(el,event,fn,options){el.addEventListener(event,fn,options);this.listeners.push(()=>el.removeEventListener(event,fn,options));}
   viewport(){return [this.root.clientWidth||innerWidth,this.root.clientHeight||innerHeight];}
-  layout(){const [w,h]=this.viewport(),s=w<h?Math.max(.62,Math.min(w/1440,h/1024)):Math.min(w/1440,h/1024);this.root.style.setProperty('--ui-scale',s);this.root.style.setProperty('--ui-width',`${w/s}px`);this.root.style.setProperty('--ui-height',`${h/s}px`);}
+  fullFrame(){const [w,h]=this.viewport();return w<=1024||w<=h;}
+  pictureRect(){
+    const [w,h]=this.viewport(),box=this.root.querySelector?.('.film-layer')?.getBoundingClientRect(),stage=this.root.getBoundingClientRect?.();
+    const bw=box?.width||w,bh=box?.height||h,left=box&&stage?box.left-stage.left:0,top=box&&stage?box.top-stage.top:0;
+    const full=this.fullFrame(),k=(full?Math.min:Math.max)(bw/1440,bh/1024),dw=1440*k,dh=1024*k;
+    return [(left+(bw-dw)/2)/w,(top+(bh-dh)*(full ? .5 : .38))/h,dw/w,dh/h];
+  }
+  layout(){const [w,h]=this.viewport(),s=w<h?Math.max(.62,Math.min(w/1440,h/1024)):Math.min(w/1440,h/1024);this.root.dataset.framing=this.fullFrame()?'full':'cover';this.root.style.setProperty('--ui-scale',s);this.root.style.setProperty('--ui-width',`${w/s}px`);this.root.style.setProperty('--ui-height',`${h/s}px`);}
   setMode(mode){this.mode=mode;this.root.dataset.mode=mode;if(mode!=='transition')delete this.root.dataset.motionPhase;this.onMode(mode);}
   releasePosters(keep){
     this.posters.forEach((p,i)=>{
@@ -76,19 +83,20 @@ class NativeFilm {
     const forward=to>from,direction=forward?'forward':'reverse',aspect=width/height;
     const anchors=forward?this.manifest.anchors:this.manifest.reverseAnchors;
     const segment=forward?from:2-from;const [start,end]=[anchors[segment],anchors[segment+1]];
-    const variant=aspect<=9/16?'portrait':aspect>=16/9?'landscape':'balanced';
-    const crop=variant==='portrait'?[.3,0,.4,1]:variant==='landscape'?[0,244/3072,1,2430/3072]:[0,0,1,1];
-    const dimensions={portrait:'1728×3072 native crop',landscape:'3840×2160',balanced:'3240×2304'};
-    const displaySizes={portrait:[1080,1920],landscape:[2560,1440],balanced:[2160,1536]};
+    // Mobile shows the complete composition, so a baked portrait crop cannot
+    // be used even when it has more vertical pixels than the full-frame file.
+    const full=this.fullFrame(),variant=full?'balanced':aspect>=16/9?'landscape':'balanced';
+    const crop=variant==='landscape'?[0,244/3072,1,2430/3072]:[0,0,1,1];
+    const dimensions={landscape:'3840×2160',balanced:'3240×2304'};
+    const displaySizes={landscape:[2560,1440],balanced:[2160,1536]};
     const [dw,dh]=displaySizes[variant],dpr=devicePixelRatio||1;
-    const displayFit=this.qualityPreference==='auto'&&width*dpr<=dw&&height*dpr<=dh;
+    const rect=this.pictureRect(),shownWidth=full?rect[2]*width:width,shownHeight=full?rect[3]*height:height;
+    const displayFit=this.qualityPreference==='auto'&&shownWidth*dpr<=dw&&shownHeight*dpr<=dh;
     const arrivalClip=to===1?'-to-interaction':'';
-    const nativePortrait=variant==='portrait'&&!displayFit;
-    const fallbackVariant=nativePortrait?'balanced':variant;
-    const suffix=displayFit?'-display':'',resolution=displayFit?`${dw}×${dh}`:dimensions[fallbackVariant];
-    const choices=[{key:direction,url:`assets/video/door-v9/${direction}${arrivalClip}-${fallbackVariant}${suffix}.mp4?v=3`,
-      start,end,crop:nativePortrait?[0,0,1,1]:crop,quality:`${resolution} / 30 fps original / H.264`}];
-    if((this.qualityPreference==='ultra'||nativePortrait)&&!this.hevcUnsupported)choices.unshift({key:direction,
+    const suffix=displayFit?'-display':'',resolution=displayFit?`${dw}×${dh}`:dimensions[variant];
+    const choices=[{key:direction,url:`assets/video/door-v9/${direction}${arrivalClip}-${variant}${suffix}.mp4?v=3`,
+      start,end,crop,quality:`${resolution} / 30 fps original / H.264`}];
+    if((['ultra','max'].includes(this.qualityPreference)||(full&&!displayFit))&&!this.hevcUnsupported)choices.unshift({key:direction,
       url:`assets/video/door-v9/${direction}${arrivalClip}-4320-hevc.mp4?v=3`,start,end,crop:[0,0,1,1],quality:'4320×3072 / 30 fps original / HEVC'});
     return choices;
   }

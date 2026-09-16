@@ -19,6 +19,7 @@ class SaunaAtmosphere {
   constructor(film,canvas,posters){
     Object.assign(this,{film,canvas,posters:[...posters],frames:0,photoFrames:0,elapsed:0,poseClock:0,last:0,scene:-1,ready:[false,false,false],failure:null,renderers:[]});
     this.verifyIdle=new URLSearchParams(location.search).get('verify')==='idle';
+    this.verifyColor=new URLSearchParams(location.search).get('verify')==='color';
     if(new URLSearchParams(location.search).has('noambient')){canvas.hidden=true;return;}
     this.steam=document.createElement('canvas');this.steam.id='steam-ambient';this.steam.setAttribute('aria-hidden','true');canvas.after(this.steam);
     this.motes=document.createElement('div');this.motes.id='ambient-motes';this.motes.setAttribute('aria-hidden','true');this.steam.after(this.motes);
@@ -32,7 +33,9 @@ class SaunaAtmosphere {
       vec2 head(float s){return s<1.?mix(vec2(.567,.269),vec2(.616,.316),s):mix(vec2(.616,.316),vec2(.422,.375),s-1.);}`;
     const photo=common+`uniform sampler2D picture,maskMap;uniform vec4 crop;uniform float alpha;
       void main(){
-        vec2 q=clamp((uv-frame.xy)/frame.zw,vec2(.0014),vec2(.9986));
+        vec2 q=(uv-frame.xy)/frame.zw;
+        if(any(lessThan(q,vec2(0.)))||any(greaterThan(q,vec2(1.)))){gl_FragColor=vec4(0.);return;}
+        q=clamp(q,vec2(.0014),vec2(.9986));
         vec2 b=body(scene),h=head(scene),p=q;
         float torso=1.-smoothstep(.58,1.,length((q-b)/vec2(.238,.282)));
         float face=1.-smoothstep(.52,1.,length((q-h)/vec2(.126,.173)));
@@ -54,11 +57,12 @@ class SaunaAtmosphere {
         p.y+=sin(clock*.53+q.y*9.)*.0012*leaf*motion;
         // Do not displace the wood, feather texture or embedded steam with noise.
         vec3 color=texture2D(picture,(p-crop.xy)/crop.zw).rgb;
-        gl_FragColor=vec4(color,alpha);
+        gl_FragColor=vec4(color*alpha,alpha);
       }`;
     const steam=common+`uniform sampler2D grain,maskMap,nextMask;uniform float progress,strength;
       void main(){
-        vec2 q=clamp((uv-frame.xy)/frame.zw,0.,1.);
+        vec2 q=(uv-frame.xy)/frame.zw;
+        if(any(lessThan(q,vec2(0.)))||any(greaterThan(q,vec2(1.)))){gl_FragColor=vec4(0.);return;}
         vec3 mask=mix(texture2D(maskMap,q).rgb,texture2D(nextMask,q).rgb,progress);
         float subject=max(region(q,body(scene),vec2(.20,.25)),region(q,head(scene),vec2(.13,.18)));
         vec2 drift=vec2(sin(q.y*7.+clock*.25)*.1,clock*.062);
@@ -68,24 +72,26 @@ class SaunaAtmosphere {
         vec2 center=scene<1.?mix(vec2(.84,.55),vec2(.84,.69),scene):mix(vec2(.84,.69),vec2(.68,.64),scene-1.);
         float room=region(q,center,vec2(.24,.42));
         float heater=region(q,vec2(.15,.72),vec2(.16,.36));
-        // The original room/heater positions fall outside a narrow viewport.
-        // Foreground wisps remain visible in the viewport on every aspect ratio.
-        float foreground=region(uv,vec2(.18,.88),vec2(.34,.43))+
-          region(uv,vec2(.86,.61),vec2(.24,.47))*.75;
-        float alpha=density*(max(mask.g*.8,max(room*.6,heater*.8))*.46*(1.-subject*.95)+
-          foreground*.25*(1.-subject*.4))*strength;
-        gl_FragColor=vec4(1.,.87,.71,alpha);
+        // Keep wisps in film coordinates, including contained mobile frames.
+        float foreground=region(q,vec2(.18,.88),vec2(.34,.43))+
+          region(q,vec2(.86,.61),vec2(.24,.47))*.75;
+        float alpha=min(.12,density*(max(mask.g*.8,max(room*.6,heater*.8))*.46*(1.-subject*.95)+
+          foreground*.25*(1.-subject*.4))*strength*.4);
+        // Emit premultiplied pixels directly. Transparent steam must carry
+        // zero RGB so mobile compositors cannot add a full-screen pale tint.
+        gl_FragColor=vec4(vec3(1.,.87,.71)*alpha,alpha);
       }`;
     try{
       this.photo=this.renderer(canvas,photo,['frame','clock','scene','motion','crop','alpha'],['picture','maskMap']);
       this.vapor=this.renderer(this.steam,steam,['frame','clock','scene','motion','progress','strength'],['grain','maskMap','nextMask']);
       this.resize=()=>{
-        const [w,h]=film.viewport(),k=Math.max(w/1440,h/1024),dw=1440*k,dh=1024*k;
-        this.rect=[(w-dw)/2/w,(h-dh)*(w<=h?.27:.38)/h,dw/w,dh/h];
+        this.rect=film.pictureRect();
         this.size(this.photo,8294400);this.size(this.vapor,1440000);
         canvas.dataset.renderSize=`${canvas.width}×${canvas.height}`;
         canvas.dataset.layerQuality='fixed full-resolution picture; separate fixed soft-steam buffer';
         this.steam.dataset.renderSize=`${this.steam.width}×${this.steam.height}`;
+        const [x,y,w,h]=this.rect;
+        this.motes.style.clipPath=`inset(${Math.max(0,y)*100}% ${Math.max(0,1-x-w)*100}% ${Math.max(0,1-y-h)*100}% ${Math.max(0,x)*100}%)`;
         // Resizing the viewport must not replace a captured frame with a
         // different pose. Reuse it whenever its source crop covers the view.
         this.drawnCapture=-1;this.lastPhotoDraw=0;
@@ -109,18 +115,33 @@ class SaunaAtmosphere {
         // Upload once after the native decoder has paused, never on every frame.
         const r=this.photo;r.gl.activeTexture(r.gl.TEXTURE0);
         if(this.capturedTexture){r.gl.deleteTexture(this.capturedTexture);r.textures=r.textures.filter(t=>t!==this.capturedTexture);}
-        this.capturedTexture=r.texture(video);this.capturedScene=i;this.capturedCrop=crop;this.poseClock=0;
+        this.capturedTexture=this.captureTexture(video);this.capturedScene=i;this.capturedCrop=crop;this.poseClock=0;
         // The captured frame replaces the fallback poster on the GPU. Keeping
         // both full-resolution textures retained an unnecessary 70 MB or more.
         this.pictures.forEach((texture,k)=>{if(texture){r.gl.deleteTexture(texture);r.textures=r.textures.filter(t=>t!==texture);this.pictures[k]=null;}});
         this.captureCount=(this.captureCount||0)+1;canvas.dataset.boundaryCaptures=String(this.captureCount);
         // Prime the hidden resting surface before any opacity reveals it.
         this.drawPhoto(i,0);this.drawnCapture=this.captureCount;
-        if(new URLSearchParams(location.search).get('verify')==='color')this.verifyCapture(video,i);
+        if(this.verifyColor)this.verifyCapture(video,i);
       };
       this.tick=this.tick.bind(this);this.raf=requestAnimationFrame(this.tick);
       window.addEventListener('pagehide',e=>{if(!e.persisted)this.destroy();},{once:true});
     }catch(e){this.fail(e);}
+  }
+  captureTexture(video){
+    // Resolve the paused decoder frame through the browser's sRGB 2D path
+    // once. Direct video -> WebGL can use a different YUV/color conversion
+    // path; never reapply exposure/gamma to compensate for that difference.
+    const snapshot=document.createElement('canvas'),gl=this.photo.gl;
+    const scale=Math.min(1,gl.getParameter(gl.MAX_TEXTURE_SIZE)/Math.max(video.videoWidth,video.videoHeight));
+    snapshot.width=Math.round(video.videoWidth*scale);snapshot.height=Math.round(video.videoHeight*scale);
+    const context=snapshot.getContext('2d',{alpha:false,colorSpace:'srgb'});
+    if(!context)throw Error('정지 프레임을 준비할 수 없습니다.');
+    try{
+      context.drawImage(video,0,0,snapshot.width,snapshot.height);
+      this.canvas.dataset.capturePipeline='video → sRGB 2D → RGBA texture';
+      return this.photo.texture(snapshot);
+    }finally{snapshot.width=1;snapshot.height=1;}
   }
   posterTexture(i){
     if(this.pictures[i])return this.pictures[i];
@@ -130,11 +151,12 @@ class SaunaAtmosphere {
     return this.pictures[i]=this.photo.texture(this.posters[i]);
   }
   renderer(canvas,fragment,names,samplers){
-    const options={alpha:true,antialias:false,depth:false,stencil:false,premultipliedAlpha:false,powerPreference:'high-performance'};
+    const options={alpha:true,antialias:false,depth:false,stencil:false,premultipliedAlpha:true,powerPreference:'high-performance'};
     const modern=canvas.getContext('webgl2',options);
     const gl=modern||canvas.getContext('webgl',options);
     if(!gl)throw Error('WebGL unavailable');
     if('drawingBufferColorSpace' in gl)gl.drawingBufferColorSpace='srgb';
+    if('unpackColorSpace' in gl)gl.unpackColorSpace='srgb';
     const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
     let vertex='attribute vec2 p;varying vec2 uv;void main(){uv=vec2((p.x+1.)*.5,1.-(p.y+1.)*.5);gl_Position=vec4(p,0.,1.);}';
     if(modern){
@@ -154,7 +176,8 @@ class SaunaAtmosphere {
       const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,repeat?gl.REPEAT:gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,repeat?gl.REPEAT:gl.CLAMP_TO_EDGE);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,im);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);
       // Filter fine feathers and cotton at the actual screen scale, so subpixel
       // breathing does not alias the full-resolution image into sparkling edges.
       if(r.mipmapped){gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
@@ -173,7 +196,7 @@ class SaunaAtmosphere {
   captureFits(){
     if(!this.capturedCrop)return false;
     const [x,y,w,h]=this.rect,[cx,cy,cw,ch]=this.capturedCrop;
-    const left=-x/w,top=-y/h,right=(1-x)/w,bottom=(1-y)/h;
+    const left=Math.max(0,-x/w),top=Math.max(0,-y/h),right=Math.min(1,(1-x)/w),bottom=Math.min(1,(1-y)/h);
     return left>=cx-.001&&top>=cy-.001&&right<=cx+cw+.001&&bottom<=cy+ch+.001;
   }
   drawPhoto(scene,strength){
@@ -202,6 +225,18 @@ class SaunaAtmosphere {
     this.canvas.dataset.colorBoundaryChecks=JSON.stringify(this.colorChecks);
     g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,r.mipmapped?g.LINEAR_MIPMAP_LINEAR:g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);
     g.viewport(0,0,this.canvas.width,this.canvas.height);
+  }
+  verifySteam(scene){
+    if(this.steamCheckScene===scene)return;
+    this.steamCheckScene=scene;
+    const g=this.vapor.gl,c=this.steam,pixels=new Uint8Array(c.width*c.height*4);
+    g.readPixels(0,0,c.width,c.height,g.RGBA,g.UNSIGNED_BYTE,pixels);
+    let invalidPremultipliedPixels=0,maxAlpha=0;
+    for(let i=0;i<pixels.length;i+=4){
+      const a=pixels[i+3];maxAlpha=Math.max(maxAlpha,a);
+      if(pixels[i]>a||pixels[i+1]>a||pixels[i+2]>a)invalidPremultipliedPixels++;
+    }
+    this.steam.dataset.compositingCheck=JSON.stringify({scene,maxAlpha,invalidPremultipliedPixels});
   }
   tick(now){
     if(this.stopped)return;this.raf=requestAnimationFrame(this.tick);
@@ -244,6 +279,7 @@ class SaunaAtmosphere {
     const r=this.vapor,g=r.gl,u=r.u;r.bind([this.noise,this.steamMasks[route?route.from:i],this.steamMasks[j]]);
     g.uniform4fv(u.frame,this.rect);g.uniform1f(u.clock,this.elapsed);g.uniform1f(u.scene,route?route.from+(route.to-route.from)*progress:i);
     g.uniform1f(u.progress,progress);g.uniform1f(u.strength,this.film.reduced?0:1);g.drawArrays(g.TRIANGLE_STRIP,0,4);
+    if(this.verifyColor)this.verifySteam(i);
     if(route?.arrivedAt)route.restingSteamFrames=(route.restingSteamFrames||0)+1;
     }
     this.scene=i;

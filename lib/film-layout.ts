@@ -10,22 +10,25 @@ export function filmLayout(width:number,height:number,time:number){
  // Phones use real CSS pixels and reflowed content, not a miniature desktop.
  // Keep this condition paired with the compact CSS media query.
  const compact=width<=600||(width<=1000&&height<=600);
+ const phonePortrait=compact&&portrait;
  const compositionScale=compact?1:portrait?Math.max(.75,Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT)):Math.min(width/DESIGN_WIDTH,height/DESIGN_HEIGHT);
  const compositionHeight=height;
  const compositionWidth=width;
  const compositionTop=0;
  const uiWidth=width/compositionScale,uiHeight=height/compositionScale;
- const artworkWidth=portrait?Math.max(width,Math.min(width*2.1,height*1.1)):Math.min(width,height*1.95);
+ // On portrait phones the figure scales with the same width as the typography;
+ // browser chrome / taller displays must not enlarge only the character.
+ const artworkWidth=phonePortrait?width*1.9:portrait?Math.max(width,Math.min(width*2.1,height*1.1)):Math.min(width,height*1.95);
  const artworkHeight=artworkWidth/CONTENT_FRACTION*9/16;
  // Leave room under the phone navigation. Native footage, held frames and
  // the compositor all use this placement, so a handoff cannot shift the head.
- const phonePortrait=compact&&portrait;
- const phoneOffset=phonePortrait?36:0;
- const baseTop=portrait?height*.06+phoneOffset:Math.min(0,(height-artworkHeight)*.055);
+ const phoneOffset=phonePortrait?36*width/390:0;
+ const phoneCopyTop=Math.min(height*.43,height-270*width/390-44);
+ const baseTop=phonePortrait?Math.max(height*.06+phoneOffset,phoneCopyTop-204*width/390):portrait?height*.06:Math.min(0,(height-artworkHeight)*.055);
  const front=Math.min(1,Math.max(0,(time-10.8)/3));
  const frontEase=front*front*(3-2*front);
  // The front character is taller; ease its crest below the same navigation.
- const frontTop=phonePortrait?Math.max(baseTop,(height<=560?88:100)+12):!portrait&&width/height>1.5?height*.02:baseTop;
+ const frontTop=phonePortrait?Math.max(baseTop+37*width/390,112*width/390):!portrait&&width/height>1.5?height*.02:baseTop;
  const artworkTop=baseTop+(frontTop-baseTop)*frontEase;
  const introWidth=Math.min(width,height*16/9);
  const blend=Math.min(1,Math.max(0,(time-3.2)/.7));

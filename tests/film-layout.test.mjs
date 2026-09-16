@@ -16,4 +16,9 @@ for(const [width,height] of [[1440,1024],[1440,778],[1920,1080],[2560,1080],[136
 const figma=filmLayout(1440,1024,8.7);
 assert.equal(figma.compositionScale,1);
 assert.equal(figma.artworkWidth,1440);
+for(const [width,height] of [[320,480],[375,568],[390,654],[390,844],[430,932],[600,960]]){
+ const fit=filmLayout(width,height,8.7);
+ assert.ok(Math.abs(fit.artworkWidth/width-1.9)<1e-9,'portrait figure keeps the same proportion to the width-based mobile typography');
+}
+assert.equal(filmLayout(390,654,8.7).artworkWidth,filmLayout(390,844,8.7).artworkWidth,'taller browser viewports do not enlarge only the figure');
 console.log('PASS: 19 viewport sizes, portrait/landscape phone text scale, original video proportions and contained intro');

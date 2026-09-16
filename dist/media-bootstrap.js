@@ -42,7 +42,7 @@
       })().catch(error=>{if(slots.get(video)===record)release(video);throw error;});
       return record.promise;
     }};
-    const app=document.createElement('script');app.src=new URL('app-v12.js?v=15',base);document.body.append(app);
+    const app=document.createElement('script');app.src=new URL('app-v12.js?v=16',base);document.body.append(app);
   }catch(error){
     const status=document.getElementById('load-status');status.textContent='영상을 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.';status.classList.remove('is-done');
     const retry=document.getElementById('retry-load');retry.hidden=false;retry.onclick=()=>location.reload();

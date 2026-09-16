@@ -21,6 +21,28 @@ const SCENES = Object.freeze([
 ]);
 
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search);
+// A tiny, scene-matched surround fills the mobile edges. It is painted only
+// at scene changes, with no second video decoder or per-frame blur rendering.
+const surround=document.createElement('div');surround.className='film-surround';surround.setAttribute('aria-hidden','true');
+const surroundCanvases=[0,1].map(()=>{const c=document.createElement('canvas');c.width=320;c.height=228;surround.append(c);return c;});
+$('.film-layer').before(surround);
+const surroundLayout=matchMedia('(max-width:1024px), (max-aspect-ratio:1/1)');
+let surroundScene=-1,surroundSlot=1,surroundRequest=0;
+function syncSurround(i){
+  if(i<0||i===surroundScene||!surroundLayout.matches)return;
+  const request=++surroundRequest,poster=document.querySelectorAll('.poster')[i];
+  saunaImageReady(poster).then(()=>{
+    if(request!==surroundRequest||$('#story').dataset.scene!==String(i))return;
+    const slot=1-surroundSlot,c=surroundCanvases[slot],context=c.getContext('2d',{alpha:false,colorSpace:'srgb'});
+    if(!context)return;
+    context.drawImage(poster,0,0,c.width,c.height);
+    surroundCanvases.forEach((layer,k)=>layer.classList.toggle('is-current',k===slot));
+    surroundSlot=slot;surroundScene=i;surround.dataset.scene=String(i);
+  }).catch(()=>{});
+}
+const refreshSurround=()=>syncSurround(Number($('#story').dataset.scene)||0);
+surroundLayout.addEventListener('change',refreshSurround);
+window.addEventListener('pagehide',e=>{if(!e.persisted)surroundLayout.removeEventListener('change',refreshSurround);},{once:true});
 function reveal(text,order){const o=document.createElement('span');o.className='reveal';o.style.setProperty('--order',order);const i=document.createElement('span');i.textContent=text;o.append(i);return o;}
 function copyReveals(parent,lines,order){
   lines.forEach((line,i)=>{const r=reveal(line,order+i);r.classList.add('copy-line');parent.append(r);});
@@ -46,7 +68,7 @@ window.addEventListener('pagehide',e=>{if(!e.persisted){readingResize.disconnect
 const hint=$('#scroll-hint'),debug=$('#debug');debug.hidden=!params.has('debug');
 function sceneUI(i){panels.forEach((p,k)=>{p.classList.toggle('is-active',k===i);p.inert=k!==i;p.setAttribute('aria-hidden',String(k!==i));});
 if(i<0)return;
-$('#story').dataset.scene=String(i);document.querySelectorAll('.poster').forEach((p,k)=>p.classList.toggle('is-current',k===i));
+$('#story').dataset.scene=String(i);document.querySelectorAll('.poster').forEach((p,k)=>p.classList.toggle('is-current',k===i));syncSurround(i);
 document.querySelectorAll('.nav a[data-scene]').forEach(a=>{const yes=Number(a.dataset.scene)===i;a.classList.toggle('active',yes);if(yes)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});
 document.title=`${SCENES[i].title} — GOOBNE OVEN SAUNA`;$('#scene-announcement').textContent=`${i+1} / 3. ${SCENES[i].title}`;syncReadingMode();}
 requestAnimationFrame(()=>{$('#site-header').classList.add('is-active');$('#site-header').inert=false;});

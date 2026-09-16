@@ -46,10 +46,19 @@ class NativeFilm {
   pictureRect(){
     const [w,h]=this.viewport(),box=this.root.querySelector?.('.film-layer')?.getBoundingClientRect(),stage=this.root.getBoundingClientRect?.();
     const bw=box?.width||w,bh=box?.height||h,left=box&&stage?box.left-stage.left:0,top=box&&stage?box.top-stage.top:0;
-    const full=this.fullFrame(),k=(full?Math.min:Math.max)(bw/1440,bh/1024),dw=1440*k,dh=1024*k;
-    return [(left+(bw-dw)/2)/w,(top+(bh-dh)*(full ? .5 : .38))/h,dw/w,dh/h];
+    const full=this.fullFrame(),zoom=full&&w<=h?1.4:1;
+    const k=(full?Math.min:Math.max)(bw*zoom/1440,bh/1024),dw=1440*k,dh=1024*k;
+    return [(left+(bw-dw)/2)/w,(top+(bh-dh)*(full ? (w<=h?.27:.5) : .38))/h,dw/w,dh/h];
   }
-  layout(){const [w,h]=this.viewport(),s=w<h?Math.max(.62,Math.min(w/1440,h/1024)):Math.min(w/1440,h/1024);this.root.dataset.framing=this.fullFrame()?'full':'cover';this.root.style.setProperty('--ui-scale',s);this.root.style.setProperty('--ui-width',`${w/s}px`);this.root.style.setProperty('--ui-height',`${h/s}px`);}
+  layout(){
+    const [w,h]=this.viewport(),s=w<h?Math.max(.62,Math.min(w/1440,h/1024)):Math.min(w/1440,h/1024);
+    this.root.dataset.framing=this.fullFrame()?'full':'cover';
+    this.root.style.setProperty('--ui-scale',s);this.root.style.setProperty('--ui-width',`${w/s}px`);this.root.style.setProperty('--ui-height',`${h/s}px`);
+    // Feather only the contained film's letterboxed edges. Use the identical
+    // mask for the native video and resting canvas so arrival cannot expose a seam.
+    const [x,y,rw,rh]=this.pictureRect(),vertical=rw>=.999,start=vertical?y:x,span=vertical?rh:rw;
+    this.root.style.setProperty('--film-edge-mask',this.fullFrame()?`linear-gradient(to ${vertical?'bottom':'right'},transparent ${start*100}%,#000 ${(start+span*.12)*100}%,#000 ${(start+span*.88)*100}%,transparent ${(start+span)*100}%)`:'none');
+  }
   setMode(mode){this.mode=mode;this.root.dataset.mode=mode;if(mode!=='transition')delete this.root.dataset.motionPhase;this.onMode(mode);}
   releasePosters(keep){
     this.posters.forEach((p,i)=>{
@@ -83,8 +92,8 @@ class NativeFilm {
     const forward=to>from,direction=forward?'forward':'reverse',aspect=width/height;
     const anchors=forward?this.manifest.anchors:this.manifest.reverseAnchors;
     const segment=forward?from:2-from;const [start,end]=[anchors[segment],anchors[segment+1]];
-    // Mobile shows the complete composition, so a baked portrait crop cannot
-    // be used even when it has more vertical pixels than the full-frame file.
+    // Start from the uncropped source: the modest mobile composition zoom
+    // retains much more of the room than a baked portrait video.
     const full=this.fullFrame(),variant=full?'balanced':aspect>=16/9?'landscape':'balanced';
     const crop=variant==='landscape'?[0,244/3072,1,2430/3072]:[0,0,1,1];
     const dimensions={landscape:'3840×2160',balanced:'3240×2304'};

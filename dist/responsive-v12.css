@@ -81,36 +81,37 @@ main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
   .nav{font-size:.75rem}
 }
 
-/* Mobile keeps all four edges of the original film visible. The native movie,
-   fallback poster and breathing canvas share NativeFilm.pictureRect(). */
+/* One continuous mobile stage: crisp full-frame film over a soft extension
+   of its own scene, with navigation and copy floating over the same surface. */
+.film-surround{display:none;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.film-surround canvas{position:absolute;inset:-12%;width:124%;height:124%;object-fit:cover;filter:blur(28px) brightness(.62);opacity:0;transition:opacity 1.1s ease;will-change:opacity}
+.film-surround canvas.is-current{opacity:1}
+main[data-framing="full"] .film-surround{display:block}
+main[data-framing="full"] .film-layer{inset:0;width:100%;height:100%}
 main[data-framing="full"] .film-media,
 main[data-framing="full"] .poster{object-fit:contain;object-position:50% 50%}
-main[data-framing="full"] .film-dim{display:none}
-main[data-framing="full"] .scene-panel{scrollbar-width:thin;scrollbar-color:#ffffff40 transparent}
+main[data-framing="full"] .film-layer,
+main[data-framing="full"] #ambient,
+main[data-framing="full"] #steam-ambient{-webkit-mask-image:var(--film-edge-mask);mask-image:var(--film-edge-mask)}
+main[data-framing="full"] .film-dim{display:block;background:linear-gradient(180deg,transparent 28%,rgba(9,6,4,.08) 42%,rgba(9,6,4,.44) 68%,rgba(9,6,4,.84) 100%)}
+main[data-framing="full"] .top-dim{height:calc(var(--header-space) + 48px);background:linear-gradient(rgba(9,6,4,.76),rgba(9,6,4,.3) 62%,transparent)}
+main[data-framing="full"] .content-frame{left:0;top:var(--header-space);width:100%;height:calc(100% - var(--header-space) - 56px - env(safe-area-inset-bottom))}
+main[data-framing="full"] .scene-panel{padding-bottom:16px;scrollbar-width:thin;scrollbar-color:#ffffff30 transparent}
 main[data-framing="full"] .scene-panel::-webkit-scrollbar{display:block;width:3px}
-main[data-framing="full"] .scene-panel::-webkit-scrollbar-thumb{background:#ffffff40;border-radius:3px}
+main[data-framing="full"] .scene-panel::-webkit-scrollbar-thumb{background:#ffffff30;border-radius:3px}
+main[data-framing="full"] .scroll-hint{background:none;border-radius:0}
 
 @media (max-aspect-ratio:1/1){
-  :root{--mobile-film-height:min(calc(100vw * 32 / 45),42dvh);--copy-start:calc(var(--header-space) + var(--mobile-film-height) + 10px)}
-  .film-layer{top:var(--header-space);bottom:auto;height:var(--mobile-film-height)}
-  .top-dim{background:#090604}
-  .content-frame{top:var(--copy-start);height:max(0px,calc(100% - var(--copy-start) - 56px - env(safe-area-inset-bottom)))}
-  .scene-panel{gap:16px;padding-top:8px;padding-bottom:20px}
-  .scene-copy{margin-top:0}
-  .scene-title{font-size:clamp(1.5rem,7vw,2.6rem);line-height:1.2}
-  .scene-body{margin-top:12px;font-size:clamp(.875rem,3.6vw,1rem);line-height:1.55}
-  .scene-statement{font-size:clamp(.875rem,3.6vw,1rem);line-height:1.55}
-  .scroll-hint{background:#090604;border-radius:24px}
+  main[data-framing="full"] .film-media,
+  main[data-framing="full"] .poster{left:-20%;right:auto;width:140%;object-position:50% 27%}
+  .scene-panel{gap:20px;padding-top:16px}
+  .scene-copy{margin-top:auto}
+  .scene-title{font-size:clamp(1.9rem,8.5vw,3rem);line-height:1.16;letter-spacing:-.04em}
+  .scene-body{margin-top:16px;font-size:clamp(.875rem,3.6vw,1rem);line-height:1.6}
+  .scene-statement{font-size:clamp(.875rem,3.6vw,1rem);line-height:1.6}
 }
-
-/* A landscape phone uses the room beside the film for its readable copy. */
-@media (max-width:1024px) and (min-aspect-ratio:1/1){
-  .film-layer{top:var(--header-space);right:auto;bottom:52px;width:54%;height:auto}
-  .content-frame{left:54%;top:var(--header-space);width:46%;height:calc(100% - var(--header-space) - 56px - env(safe-area-inset-bottom))}
-  .scene-panel{display:flex;gap:14px;padding:8px 18px 20px 10px}
-  .scene-panel::before{display:none}
-  .scene-copy{margin-top:0}
-  .scene-title{font-size:clamp(1.4rem,3vw,1.8rem)}
-  .scene-body,.scene-statement{font-size:.8125rem;line-height:1.5}
-  .scroll-hint{background:#090604;border-radius:24px}
+@media (max-height:560px) and (max-aspect-ratio:1/1){
+  .scene-panel{gap:14px}
+  .scene-title{font-size:1.7rem}
+  .scene-body{margin-top:12px}
 }

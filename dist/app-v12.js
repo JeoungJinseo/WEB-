@@ -46,7 +46,6 @@ window.addEventListener('pagehide',e=>{if(!e.persisted)surroundLayout.removeEven
 function reveal(text,order){const o=document.createElement('span');o.className='reveal';o.style.setProperty('--order',order);const i=document.createElement('span');i.textContent=text;o.append(i);return o;}
 function copyReveals(parent,lines,order){
   lines.forEach((line,i)=>{const r=reveal(line,order+i);r.classList.add('copy-line');parent.append(r);});
-  const fluid=reveal(lines.join(' '),order);fluid.classList.add('copy-fluid');parent.append(fluid);
 }
 const panels=SCENES.map((s,i)=>{const section=document.createElement('section');section.className='scene-panel';section.id=s.id;section.dataset.nodeId=s.node;section.inert=true;section.setAttribute('aria-hidden','true');
 const copy=document.createElement('div');copy.className='scene-copy';copy.style.setProperty('--copy-top',`${s.titleTop/1024*100}%`);
@@ -55,16 +54,33 @@ const body=document.createElement('p');body.className='scene-body';copyReveals(b
 const statement=document.createElement('p');statement.className='scene-statement';copyReveals(statement,s.statement,3);
 copy.append(title,body);section.append(copy,statement);$('#scene-panels').append(section);return section;});
 const compactLayout=matchMedia('(max-width: 1024px), (max-aspect-ratio: 1/1), (max-height: 600px)');
+const copyBlocks=panels.flatMap(p=>[p.querySelector('.scene-body'),p.querySelector('.scene-statement')]);
+function fitCopyLines(){
+  // Keep the desktop's authored line endings on every screen. Measure the
+  // actual font and shrink each paragraph uniformly, never stretch the type.
+  copyBlocks.forEach(block=>{
+    if(!compactLayout.matches){block.style.removeProperty('--copy-fit');return;}
+    const previous=Number(block.style.getPropertyValue('--copy-fit'))||1;
+    const width=Math.max(...[...block.querySelectorAll('.copy-line>span')].map(line=>line.getBoundingClientRect().width))/previous;
+    if(!width||!block.clientWidth)return;
+    const fit=Math.min(1,(block.clientWidth-1)/width);
+    if(Math.abs(fit-previous)>.0005)block.style.setProperty('--copy-fit',fit.toFixed(5));
+  });
+}
 function syncReadingMode(){
   const active=panels.find(p=>p.classList.contains('is-active'));
   const overflow=!!active&&compactLayout.matches&&active.scrollHeight>active.clientHeight+2;
   $('#story').dataset.readingOverflow=String(overflow);
   panels.forEach(p=>{const reading=p===active&&overflow;p.tabIndex=reading?0:-1;});
 }
-const readingResize=new ResizeObserver(syncReadingMode);
+const syncCopyLayout=()=>{fitCopyLines();syncReadingMode();};
+const readingResize=new ResizeObserver(syncCopyLayout);
 panels.forEach(p=>{readingResize.observe(p);readingResize.observe(p.querySelector('.scene-copy'));readingResize.observe(p.querySelector('.scene-statement'));});
-compactLayout.addEventListener('change',syncReadingMode);
-window.addEventListener('pagehide',e=>{if(!e.persisted){readingResize.disconnect();compactLayout.removeEventListener('change',syncReadingMode);}},{once:true});
+compactLayout.addEventListener('change',syncCopyLayout);
+document.fonts.ready.then(syncCopyLayout);
+document.fonts.addEventListener('loadingdone',syncCopyLayout);
+syncCopyLayout();
+window.addEventListener('pagehide',e=>{if(!e.persisted){readingResize.disconnect();compactLayout.removeEventListener('change',syncCopyLayout);document.fonts.removeEventListener('loadingdone',syncCopyLayout);}},{once:true});
 const hint=$('#scroll-hint'),debug=$('#debug');debug.hidden=!params.has('debug');
 function sceneUI(i){panels.forEach((p,k)=>{p.classList.toggle('is-active',k===i);p.inert=k!==i;p.setAttribute('aria-hidden',String(k!==i));});
 if(i<0)return;

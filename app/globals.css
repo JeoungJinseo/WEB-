@@ -37,6 +37,9 @@
 .film-page[data-atmosphere=true][data-painted=true] .ambient-film{opacity:1}
 .film-page[data-atmosphere=true] .scene-shade{visibility:hidden}
 .film-page[data-atmosphere=false] .foreground{visibility:hidden}
+/* Keep a solid, current-frame matte until the logo has completely faded. */
+.film-page[data-painted=true] .film-media.foreground{opacity:0;transition:none}
+.film-page[data-painted=true][data-foreground=true] .film-media.foreground{opacity:1}
 
 /* Match the native intro/fallback movie to the compositor's source-red grade.
    Supplied PNG fallbacks already have the reference palette. */

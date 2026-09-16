@@ -154,6 +154,14 @@ void main(){
     // artwork. Keep reconstruction taps safely inside the picture as well.
     movieUV=clamp(movieUV,vec2(.116,2.0/filmSize.y),vec2(.884,1.0-2.0/filmSize.y));
     c=sampleTexture(film,filmSize,movieUV);
+    if(outside){
+      // A moving crest can touch the movie's first row. Extend clear backdrop
+      // samples outside the picture, never that row's dark subject pixels.
+      c.rgb=(texture2D(film,vec2(.20,.12)).rgb
+        +texture2D(film,vec2(.80,.12)).rgb
+        +texture2D(film,vec2(.20,.18)).rgb
+        +texture2D(film,vec2(.80,.18)).rgb)*.25;
+    }
     subject=1.0-smoothstep(.10,.69,c.r);
     behind=smoothstep(.65,.89,c.r);
     if(!outside)c.rgb=refineSubject(movieUV,c.rgb);
@@ -186,6 +194,9 @@ void main(){
   // few rows into the dark footer instead of stretching jacket pixels down.
   if(filmRect.y+filmRect.w<.999)c.rgb*=1.0-smoothstep(.95,1.0,sceneUV.y);
   if(foregroundOnly>.5){
+    // The matte stays opaque while the logo fades; only the subject's shade
+    // follows the fade, meeting the base layer without a brightness jump.
+    c.rgb*=1.0-clamp((uv.y-.35)/.65,0.0,1.0)*shadeOpacity;
     // Give the browser premultiplied pixels: transparent red background must
     // contain zero RGB, or a compositor can wash out the gradient and logo.
     float alpha=outside?0.0:subject;
@@ -294,6 +305,7 @@ function createLayer(canvas:HTMLCanvasElement,video:HTMLVideoElement,foreground:
  * playhead or scene stop. Both canvas layers use the same breathing phase. */
 export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,foreground:HTMLCanvasElement,video:HTMLVideoElement){
   const shade=root.querySelector<HTMLElement>('.scene-shade');
+  const wordmark=root.querySelector<HTMLElement>('.profile-wordmark');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const base=reduced?null:createLayer(canvas,video,false);
   const subject=base?createLayer(foreground,video,true):null;
@@ -329,10 +341,15 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
       const eased=stillBlend*stillBlend*(3-2*stillBlend);
       const still=heldImage&&eased>0?{source:heldImage,mix:eased}:null;
       base!.draw(breath,strength,now/1000,shadeAlpha,still);
-      if(mediaTime>=6.6&&mediaTime<=11.9)subject!.draw(breath,0,now/1000,0,still);
+      const logoOpacity=wordmark?Math.min(1,Math.max(0,Number.parseFloat(getComputedStyle(wordmark).opacity)||0)):0;
+      const coverLogo=sceneKey()==='profile'||logoOpacity>.001;
+      // Follow the actual CSS fade instead of a hard media-time cutoff: the
+      // moving silhouette must occlude every remaining pixel of the logo.
+      if(coverLogo)subject!.draw(breath,0,now/1000,shadeAlpha*(1-logoOpacity),still);
+      root.dataset.foreground=String(coverLogo);
       root.dataset.atmosphere='true';
       root.dataset.detailSource=stillBlend===1&&heldImage?`original-${heldScene}`:'video';
-    }catch{available=false;root.dataset.atmosphere='false'}
+    }catch{available=false;root.dataset.atmosphere='false';root.dataset.foreground='false'}
   }
   function wake(){if(!raf&&!disposed&&enabled()&&!document.hidden&&(resting()||strength>.001||stillBlend>0))raf=requestAnimationFrame(tick)}
   function tick(now:number){
@@ -348,7 +365,7 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
     wake();
   }
   function visibility(){if(document.hidden){cancelAnimationFrame(raf);raf=0;last=0}else{last=0;render(performance.now());wake()}}
-  function lost(event:Event){event.preventDefault();available=false;root.dataset.atmosphere='false';cancelAnimationFrame(raf);raf=0}
+  function lost(event:Event){event.preventDefault();available=false;root.dataset.atmosphere='false';root.dataset.foreground='false';cancelAnimationFrame(raf);raf=0}
   document.addEventListener('visibilitychange',visibility);
   canvas.addEventListener('webglcontextlost',lost);foreground.addEventListener('webglcontextlost',lost);
   return {
@@ -356,7 +373,7 @@ export function createFilmAtmosphere(root:HTMLElement,canvas:HTMLCanvasElement,f
       if((next==='settling'||next==='idle')&&!resting()){idleTime=0;strength=0;last=0}
       mode=next;
       if(next==='transition'||next==='intro')approaching=false;
-      if(next==='intro'){strength=0;stillBlend=0;heldScene='';heldImage=null;root.dataset.atmosphere='false';root.dataset.detailSource='video'}
+      if(next==='intro'){strength=0;stillBlend=0;heldScene='';heldImage=null;root.dataset.atmosphere='false';root.dataset.foreground='false';root.dataset.detailSource='video'}
       wake();
     },
     handoff(time:number,progress:number){

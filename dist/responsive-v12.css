@@ -38,7 +38,7 @@ main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
   .nav a.active::after{left:12%;right:12%;bottom:3px}
   .content-frame{top:var(--header-space);height:calc(100% - var(--header-space))}
   .scene-panel{
-    display:flex;flex-direction:column;gap:clamp(14px,2.5dvh,26px);
+    display:flex;flex-direction:column;gap:clamp(10px,1.8dvh,16px);
     padding:clamp(12px,2dvh,24px) var(--edge-right) var(--content-bottom) var(--edge-left);
     overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
     scrollbar-width:none;-webkit-overflow-scrolling:touch;
@@ -46,9 +46,9 @@ main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
   .scene-panel::-webkit-scrollbar{display:none}
   .scene-panel.is-active{pointer-events:auto}
   .scene-copy{position:static;flex:none;width:100%;max-width:680px;margin-top:auto;pointer-events:auto}
-  .scene-title{font-size:clamp(2rem,8.6vw,3.5rem);line-height:1.16;letter-spacing:-.04em;white-space:normal;word-break:keep-all}
-  .scene-body{margin-top:clamp(12px,2dvh,18px);max-width:100%;--copy-font-size:clamp(.875rem,3.65vw,1.0625rem);line-height:1.55;letter-spacing:-.02em}
-  .scene-statement{position:static;flex:none;left:auto;right:auto;top:auto;bottom:auto;width:100%;max-width:640px;--copy-font-size:clamp(.875rem,3.75vw,1.125rem);line-height:1.5;text-align:left;letter-spacing:-.025em}
+  .scene-title{font-size:clamp(1.75rem,7.4vw,3.1rem);line-height:1.12;letter-spacing:-.04em;white-space:normal;word-break:keep-all}
+  .scene-body{margin-top:clamp(8px,1.4dvh,12px);max-width:100%;--copy-font-size:clamp(.75rem,3.2vw,.9375rem);line-height:1.38;letter-spacing:-.02em}
+  .scene-statement{position:static;flex:none;left:auto;right:auto;top:auto;bottom:auto;width:100%;max-width:640px;--copy-font-size:clamp(.75rem,3.2vw,.9375rem);line-height:1.38;text-align:left;letter-spacing:-.025em}
   .scene-body,.scene-statement{font-size:calc(var(--copy-font-size) * var(--copy-fit,1));overflow-wrap:normal;word-break:keep-all}
   .scroll-hint{left:50%;right:auto;bottom:max(8px,env(safe-area-inset-bottom));min-height:44px;max-width:calc(100% - 32px);transform:translateX(-50%);padding:10px 14px;font-size:.625rem}
   .load-status{bottom:calc(64px + env(safe-area-inset-bottom));max-width:calc(100% - 32px);text-align:center}
@@ -66,9 +66,9 @@ main[data-reading-overflow="true"]{touch-action:pan-y pinch-zoom}
   .scene-panel::before{content:"";display:block;grid-column:1/-1}
   .scene-panel{padding-top:12px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);grid-template-rows:minmax(0,1fr) auto;gap:0 24px;align-items:end}
   .scene-copy,.scene-statement{margin:0;min-width:0}
-  .scene-title{font-size:clamp(1.5rem,4.1vw,2.5rem)}
-  .scene-body{margin-top:8px;--copy-font-size:.8125rem;line-height:1.45}
-  .scene-statement{--copy-font-size:.8125rem;line-height:1.5}
+  .scene-title{font-size:clamp(1.4rem,3.7vw,2.25rem)}
+  .scene-body{margin-top:8px;--copy-font-size:.75rem;line-height:1.38}
+  .scene-statement{--copy-font-size:.75rem;line-height:1.38}
   .scroll-hint>span:first-child{font-size:.625rem}
   .scroll-hint .hint-arrow{font-size:16px}
 }
@@ -103,14 +103,14 @@ main[data-framing="full"] .scroll-hint{background:none;border-radius:0}
 @media (max-aspect-ratio:1/1){
   main[data-framing="full"] .film-media,
   main[data-framing="full"] .poster{left:-20%;right:auto;width:140%;object-position:50% 27%}
-  .scene-panel{gap:20px;padding-top:16px}
+  .scene-panel{gap:12px;padding-top:16px}
   .scene-copy{margin-top:auto}
-  .scene-title{font-size:clamp(1.9rem,8.5vw,3rem);line-height:1.16;letter-spacing:-.04em}
-  .scene-body{margin-top:16px;--copy-font-size:clamp(.875rem,3.6vw,1rem);line-height:1.6}
-  .scene-statement{--copy-font-size:clamp(.875rem,3.6vw,1rem);line-height:1.6}
+  .scene-title{font-size:clamp(1.7rem,7.4vw,2.65rem);line-height:1.12;letter-spacing:-.04em}
+  .scene-body{margin-top:10px;--copy-font-size:clamp(.75rem,3.2vw,.875rem);line-height:1.38}
+  .scene-statement{--copy-font-size:clamp(.75rem,3.2vw,.875rem);line-height:1.38}
 }
 @media (max-height:560px) and (max-aspect-ratio:1/1){
-  .scene-panel{gap:14px}
-  .scene-title{font-size:1.7rem}
-  .scene-body{margin-top:12px}
+  .scene-panel{gap:10px}
+  .scene-title{font-size:1.55rem}
+  .scene-body{margin-top:8px}
 }

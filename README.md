@@ -68,3 +68,19 @@ npm test
 [GitHub Pages 공식 워크플로 문서](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 
 기존 저장소의 `test.py`와 커밋 이력은 보존합니다.
+
+## TEAM KN0T 팀 소개 사이트
+
+`apps/team-gallery/`에는 다섯 멤버의 프로필, 모바일 조판, 카드 슬라이드와 깊이 전환 효과를 포함한 팀 소개 사이트 소스가 있습니다.
+
+[현재 공개된 팀 소개 사이트](https://ddp-knot-depth-gallery.harry040904.chatgpt.site/)
+
+Node.js 22.13 이상과 pnpm으로 실행합니다.
+
+```sh
+cd apps/team-gallery
+pnpm install
+pnpm dev
+```
+
+프로덕션 빌드는 `pnpm build`로 실행합니다. 자세한 구성은 [팀 소개 사이트 README](apps/team-gallery/README.md)를 참고하세요. 이 앱은 Sites에서 별도로 호스팅하며, 기존 GitHub Pages 워크플로는 계속 루트의 `dist/`를 배포합니다.

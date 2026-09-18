@@ -1,0 +1,48 @@
+export const values = [
+  {
+    id: "healthy",
+    number: "01",
+    lead: "We aim to",
+    activeLead: "We lead the",
+    title: "HEALTHY LIFE",
+    image: "/oven-sauna/assets/healthy.webp",
+    description: "맛있게 먹고 건강하게 지내는 균형 잡힌 하루.\n부담 없이 오래 이어갈 수 있는\n건강한 생활 방식을 제안합니다.",
+    cropOffset: 0,
+    restingShade: 0,
+  },
+  {
+    id: "together",
+    number: "02",
+    lead: "We enjoy",
+    activeLead: "We enjoy",
+    title: "TOGETHER",
+    image: "/oven-sauna/assets/together.webp",
+    description: "함께 먹고 쉬며 자연스럽게 가까워지는 시간.\n서로의 시간을 나누고 관계를 쌓아가는\n경험을 만들어갑니다.",
+    cropOffset: 0,
+    restingShade: 0,
+  },
+  {
+    id: "cheerful",
+    number: "03",
+    lead: "We pursue",
+    activeLead: "We pursue",
+    title: "CHEERFUL LIFE",
+    image: "/oven-sauna/assets/cheerful.webp",
+    description: "익숙한 하루에 작은 재미와 유쾌함을 더하는 순간.\n보는 순간부터 기분이 환기되는 밝은 경험을\n담고자 합니다.",
+    cropOffset: 0,
+    restingShade: 0,
+  },
+  {
+    id: "recovery",
+    number: "04",
+    lead: "We provide",
+    activeLead: "We provide",
+    title: "RECOVERY",
+    image: "/oven-sauna/assets/recovery.webp",
+    description: "바쁜 흐름에서 잠시 멈추고 숨을 고르는 시간.\n몸과 마음에 여유를 더하고,\n다시 움직일 힘을 채웁니다.",
+    cropOffset: 0.1226,
+    restingShade: 0.38,
+  },
+] as const;
+
+export type Value = (typeof values)[number];

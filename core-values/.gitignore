@@ -1,0 +1,7 @@
+node_modules
+.next/
+out/
+dist/
+.sites-runtime/
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,205 @@
+@font-face { font-family: OvenHighman; src: url('/oven-sauna/fonts/highman.otf') format('opentype'); font-display: swap; }
+@font-face { font-family: OvenStaatliches; src: url('/oven-sauna/fonts/staatliches.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: OvenPretendard; src: url('/oven-sauna/fonts/pretendard.otf') format('opentype'); font-display: swap; }
+@font-face { font-family: OvenUtendo; src: url('/oven-sauna/fonts/utendo.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: OvenUtendo; src: url('/oven-sauna/fonts/utendo-bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+
+.page {
+  --heat: #fb0102;
+  /* The reference fits its 1440 × 1024 composition to both viewport axes.
+     Size the artwork with that scale, but anchor the chrome to the full width. */
+  --unit: max(10px, min(1vw, 1.40625svh));
+  --card-width: calc(var(--unit) * 42.939);
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  width: 100%;
+  overflow: clip;
+  background: #000;
+  color: #fff;
+  font-family: OvenPretendard, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.page button { font: inherit; cursor: pointer; }
+.page button:focus-visible, .page a:focus-visible { outline: 2px solid #fff; outline-offset: 6px; }
+.page p, .page h1, .page h2 { margin: 0; }
+.skipLink { position: fixed; left: 16px; top: -100px; z-index: 100; padding: 12px 20px; background: #fff; color: #000; }
+.skipLink:focus { top: 16px; }
+.atmosphere { position: absolute; inset: 0 0 auto; height: calc(var(--unit) * 48); overflow: hidden; z-index: -2; pointer-events: none; opacity: .45; }
+.heatTop { position: absolute; width: 135.56%; height: auto; max-width: none; left: 4.07%; top: calc(var(--unit) * -22.90); }
+.heatBottom { position: absolute; width: 135.56%; height: auto; max-width: none; left: -17.78%; top: calc(var(--unit) * -6.63); }
+.topFade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.82), transparent 48%, #000 100%); }
+.header { position: relative; height: calc(var(--unit) * 7.638889); z-index: 5; }
+.brand { position: absolute; left: 4.3472%; top: calc(var(--unit) * 1.770833); display: flex; gap: calc(var(--unit) * .909722); align-items: center; }
+.brandMark { flex: none; width: calc(var(--unit) * 2.951389); height: calc(var(--unit) * 2.729167); margin: calc(var(--unit) * .555556); transform: rotate(-45deg); filter: brightness(0) invert(1); }
+.brand > span { display: flex; flex-direction: column; }
+.brand strong { font-family: OvenHighman, sans-serif; font-weight: 400; font-size: calc(var(--unit) * 1.832014); line-height: 1.1; white-space: nowrap; }
+.brand small { display: block; padding-top: calc(var(--unit) * .557569); font-family: OvenUtendo, sans-serif; font-size: calc(var(--unit) * .904028); line-height: 1.19; color: #bdbdbd; white-space: nowrap; }
+.nav { display: flex; align-items: center; justify-content: space-between; position: absolute; left: 28%; right: 28%; top: calc(var(--unit) * 2.513194); white-space: nowrap; }
+.nav button { position: relative; border: 0; padding: calc(var(--unit) * 1.180556) 0; background: none; color: #c4c4c4; font-family: OvenUtendo, sans-serif; font-size: calc(var(--unit) * 1.041667); line-height: 1.35; font-weight: 700; }
+.nav button::after { content: ''; position: absolute; bottom: calc(var(--unit) * .416667); left: calc(var(--unit) * -.277778); right: calc(var(--unit) * -.277778); height: max(1px, calc(var(--unit) * .138889)); background: white; transform: scaleX(0); transition: transform .4s cubic-bezier(.16,1,.3,1); }
+.nav button[data-current='true'] { color: white; }
+.nav button[data-current='true']::after, .nav button:hover::after { transform: scaleX(1); }
+.contact { position: absolute; right: 4.8958%; top: calc(var(--unit) * 2.929861); border: 0; border-radius: 100px; width: calc(var(--unit) * 9.933889); padding: calc(var(--unit) * .834792); background: #000; color: var(--heat); font-family: OvenUtendo, sans-serif !important; font-size: calc(var(--unit) * 1.252153) !important; line-height: 1.35 !important; white-space: nowrap; transition: background .3s, color .3s; }
+.contact:hover { background: var(--heat); color: white; }
+.rolling { display: block; position: relative; overflow: hidden; line-height: 1.35; }
+.rolling > span { display: block; transition: transform .8s cubic-bezier(.16,1,.3,1); }
+.rolling > span + span { position: absolute; inset: 0; transform: translateY(-110%); }
+.nav button:is(:hover, :focus-visible) .rolling > span:first-child,
+.contact:is(:hover, :focus-visible) .rolling > span:first-child { transform: translateY(110%); }
+.nav button:is(:hover, :focus-visible) .rolling > span + span,
+.contact:is(:hover, :focus-visible) .rolling > span + span { transform: translateY(0); }
+.heatAtmosphere { --heat-u: calc(var(--unit) / 14.4); position: absolute; inset: 0 0 auto; height: calc(720 * var(--heat-u)); z-index: -1; pointer-events: none; }
+.heatFilters { position: absolute; width: 0; height: 0; }
+.heatLines { position: absolute; inset: 0; }
+.heatLines i { position: absolute; left: 0; right: 0; overflow: hidden; background: linear-gradient(90deg, #090000 0%, #830000 48%, #fb0102 100%); filter: url(#oven-band-vapor-density) blur(calc(1.8 * var(--heat-u))); }
+.heatLines i:nth-child(1) { top: calc(169 * var(--heat-u)); height: calc(11.153111 * var(--heat-u)); opacity: .4; }
+.heatLines i:nth-child(2) { top: calc(196.517578 * var(--heat-u)); height: calc(20.745117 * var(--heat-u)); opacity: .5; }
+.heatLines i:nth-child(3) { top: calc(223.628906 * var(--heat-u)); height: calc(8.439244 * var(--heat-u)); opacity: .7; }
+.heatLines i:nth-child(4) { top: calc(247.390625 * var(--heat-u)); height: calc(18.820313 * var(--heat-u)); }
+.heatLines i::after { content: ''; position: absolute; inset: 0; width: 160%; background: linear-gradient(90deg, transparent 0%, rgb(0 0 0 / .8) 22%, rgb(115 0 0 / .25) 44%, #ff0800 62%, rgb(255 0 0 / .65) 71%, transparent 94%); filter: blur(calc(24 * var(--heat-u))); animation: heatGradientPass 10.8s linear infinite; will-change: transform; }
+.heatLines i:nth-child(1)::after { animation-duration: 12.6s; animation-delay: -4.2s; }
+.heatLines i:nth-child(2)::after { animation-duration: 10.8s; animation-delay: -6.3s; }
+.heatLines i:nth-child(3)::after { animation-duration: 11.7s; animation-delay: -1.5s; }
+.heatLines i:nth-child(4)::after { animation-duration: 9.9s; animation-delay: -3s; }
+.heatGlow { position: absolute; left: -2%; right: -2%; top: calc(280 * var(--heat-u)); height: calc(430 * var(--heat-u)); background: radial-gradient(ellipse at 26% 18%, rgb(237 5 5 / .5), transparent 62%), radial-gradient(ellipse at 81% 5%, rgb(237 5 5 / .42), transparent 60%), linear-gradient(180deg, rgb(237 5 5 / .28), transparent 88%); filter: url(#oven-ambient-vapor-density) blur(calc(8 * var(--heat-u))); mask-image: linear-gradient(180deg, transparent, #000 12%, #000 58%, transparent); }
+.heatAtmosphere[data-running='false'] i::after { animation-play-state: paused; }
+.heatAtmosphere[data-enhanced='false'] .heatLines i,
+.heatAtmosphere[data-enhanced='false'] .heatGlow { filter: none; }
+.heatAtmosphere[data-enhanced='false'] .heatLines i::after { display: none; }
+@keyframes heatGradientPass { from { transform: translateX(-105%); } to { transform: translateX(70%); } }
+/* Preserve the desktop heading proportions; compact body copy reflows below
+   at a readable size instead of shrinking to fit two lines. */
+.intro { --intro-unit: min(var(--unit), calc((100vw - 8.6944vw) / 54.166667)); position: relative; padding: calc(var(--unit) * 11.1) 4.3472% 0; }
+/* Remove Highman's 0.04em leading side bearing at each heading's own size. */
+.eyebrow, .intro h1 { text-indent: -.04em; }
+.eyebrow { color: var(--heat); font-family: OvenHighman, sans-serif; font-size: calc(var(--intro-unit) * 3.472); line-height: 1.503; }
+.intro h1 { font-family: OvenHighman, sans-serif; font-weight: 400; font-size: calc(var(--intro-unit) * 9.508); line-height: .91; margin-top: calc(var(--intro-unit) * .93); white-space: nowrap; }
+.introDescription { margin-top: var(--intro-unit) !important; font-size: calc(var(--intro-unit) * 1.389); line-height: 1.503; }
+.introLine { display: block; white-space: nowrap; }
+.gallery { position: relative; margin-top: calc(var(--unit) * 5.95); scroll-margin-top: 20px; }
+.viewport { position: relative; width: 100%; padding: 12px 0 16px; overflow: hidden; touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; cursor: grab; }
+.viewport .card { cursor: grab; }
+.viewport[data-dragging='true'], .viewport[data-dragging='true'] .card { cursor: grabbing; }
+.viewport[data-dragging='true'] .card { transform: none; }
+.viewport img { -webkit-user-drag: none; }
+.rail { display: flex; align-items: flex-start; gap: calc(var(--unit) * 3.153); width: max-content; will-change: transform; transform: translate3d(calc(var(--unit) * -8.82),0,0); }
+.cardSlot { width: var(--card-width); aspect-ratio: 618.324 / 759; flex: none; }
+.page[data-enhanced='true'] .cardSlot { will-change: transform; }
+.page[data-enhanced='false'] .card { transform: none; }
+.card { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; isolation: isolate; border: 0; padding: 0; border-radius: calc(var(--card-width) * .04813); color: #fff; background: #170d07; text-align: left; transform: perspective(1600px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); transition: transform .75s cubic-bezier(.16,1,.3,1); -webkit-tap-highlight-color: transparent; }
+.card:focus-visible { outline-offset: -3px !important; }
+.photoFallback, .displacement { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.photoFallback { isolation: isolate; }
+.photoFallback > img { height: 122.2% !important; width: 100%; object-fit: fill; inset: 0 !important; }
+.photoFallback[data-recovery='true'] > img { top: -14.99% !important; }
+.photoFallback::before, .photoFallback::after { content: ''; position: absolute; inset: 0; transition: opacity .55s ease; }
+.photoFallback::before { z-index: 1; background: rgba(0,0,0,.7); opacity: 0; }
+.photoFallback::after { background: linear-gradient(180deg, rgba(0,0,0,.3), transparent 24%, rgba(0,0,0,.78)); }
+.photoFallback[data-recovery='true']::after { background: linear-gradient(180deg, rgba(0,0,0,.3), transparent 24%, rgba(0,0,0,.78)), linear-gradient(#0006, #0006); }
+.card[data-active='true'] .photoFallback::after { opacity: 0; }
+.card[data-active='true'] .photoFallback::before { opacity: 1; }
+.displacement { opacity: 0; transition: opacity .25s; }
+.displacement[data-ready='true'] { opacity: 1; }
+.cardBadge { position: absolute; left: 6.55%; top: 4.17%; display: flex; align-items: center; justify-content: center; width: 20.81%; height: 5.65%; border: 1px solid rgba(188,188,188,.65); border-radius: 40px; background: rgba(58,58,58,.42); font-size: calc(var(--card-width) * .03059); line-height: 1; transition: transform .65s cubic-bezier(.16,1,.3,1); }
+.card[data-active='true'] .cardBadge { transform: translateY(calc(var(--card-width) * .0224634658)); }
+/* Same two positions as the reference; transform avoids layout work on every frame. */
+.cardHeading { position: absolute; top: 15.45%; left: 6.55%; right: 4%; display: flex; flex-direction: column; gap: calc(var(--card-width) * .032); transform: translate3d(0,calc(var(--card-width) * .6880203583),0); transition: transform .75s cubic-bezier(.16,1,.3,1); pointer-events: none; }
+.cardLead { font-family: OvenStaatliches, sans-serif; font-weight: 400; color: #ededed; font-size: calc(var(--card-width) * .06016); line-height: .91; }
+.cardTitle { font-family: OvenHighman, sans-serif; font-size: calc(var(--card-width) * .18049); line-height: .91; color: var(--heat); white-space: nowrap; text-indent: -.04em; }
+.card[data-active='true'] .cardHeading { transform: translate3d(0,0,0); }
+/* Keep the authored line breaks and card-relative typesetting at every width. */
+.cardDescription { position: absolute; bottom: 12%; left: 6.55%; right: 6.55%; font-size: calc(var(--card-width) * .0396); line-height: 1.5; word-break: keep-all; white-space: pre-line; opacity: 0; transform: translate3d(0,20px,0); transition: opacity .38s ease, transform .7s cubic-bezier(.16,1,.3,1); pointer-events: none; }
+.card[data-card='cheerful'] .cardDescription, .card[data-card='recovery'] .cardDescription { left: 8.4%; right: 8.4%; }
+.card:is([data-card='cheerful'], [data-card='recovery']) :is(.cardBadge, .cardHeading) { left: 8.4%; }
+.card[data-active='true'] .cardDescription { opacity: 1; transform: translate3d(0,0,0); transition-delay: .17s; }
+.galleryFooter { display: flex; align-items: center; justify-content: space-between; padding: 20px 4.8958% 32px 4.3472%; }
+.gestureHint { display: flex; align-items: center; gap: 10px; font-family: OvenUtendo, sans-serif; font-size: 10px; letter-spacing: .13em; color: #8f817b; }
+.liveDot { width: 5px; height: 5px; border-radius: 50%; background: var(--heat); box-shadow: 0 0 9px #fb010280; }
+.liveDot[data-paused='true'] { background: #777; box-shadow: none; }
+.touchHint { display: none; }
+.galleryControls { display: flex; align-items: center; gap: 8px; }
+.galleryControls button { background: transparent; color: #b6aaa4; border: 1px solid #352520; border-radius: 50%; width: 38px; height: 38px; font-size: 18px; transition: color .2s, border-color .2s; }
+.galleryControls button:hover { color: #fff; border-color: #ad493b; }
+.galleryControls .pauseButton { border-radius: 22px; font-size: 11px; width: 74px; }
+.galleryControls button:disabled { opacity: .4; cursor: default; }
+.dialog { width: min(480px, calc(100vw - 40px)); border: 1px solid #452320; border-radius: 20px; padding: 0; background: #100a09; color: white; margin: auto; font-family: OvenPretendard, sans-serif; }
+.dialog::backdrop { background: #000b; backdrop-filter: blur(8px); }
+.dialogBody { position: relative; padding: 48px 36px 36px; }
+.dialogBody > p:first-of-type { color: #ae9289; letter-spacing: .08em; font: 11px OvenUtendo, sans-serif; }
+.dialog h2 { font: 64px OvenHighman, sans-serif; color: var(--heat); margin: 12px 0 24px; }
+.dialogBody > p:last-of-type { color: #cabdb7; line-height: 1.7; font-size: 15px; }
+.dialogClose { position: absolute; top: 12px; right: 18px; background: none; border: none; font-size: 30px !important; color: #bba59b; }
+.dialogAction { margin-top: 32px; display: flex; justify-content: space-between; width: 100%; border: 0; border-top: 1px solid #452320; padding: 20px 0 0; background: none; color: white; }
+
+/* Reflow compact screens instead of shrinking the desktop artwork to their height.
+   Insets also protect the content beside a phone's notch in landscape. */
+@media (max-width: 1024px), (max-height: 600px), (max-aspect-ratio: 1/1) {
+  .page {
+    --unit: clamp(9px, 1vw, 14.4px);
+    --gutter: clamp(16px, 5vw, 48px);
+    --inset-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+    --inset-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    --card-width: min(calc(100vw - var(--inset-left) - var(--inset-right) - 16px), clamp(280px, 48vw, 620px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    height: auto;
+    padding: max(12px, env(safe-area-inset-top, 0px)) var(--inset-right) 0 var(--inset-left);
+  }
+  .brand { position: static; gap: 6px; min-width: 0; min-height: 44px; justify-self: start; }
+  .brandMark { width: 25px; height: 25px; margin: 3px; }
+  .brand strong { font-size: clamp(18px, 2.4vw, 24px); }
+  .brand small { padding-top: 5px; font-size: clamp(9px, 1.2vw, 11px); }
+  .contact { position: static; grid-column: 2; grid-row: 1; min-height: 44px; width: auto; padding: 10px 12px; font-size: 13px !important; }
+  .nav { position: static; grid-column: 1 / -1; grid-row: 2; gap: 8px; min-width: 0; }
+  .nav button { min-width: 44px; min-height: 44px; padding: 10px 2px; font-size: clamp(12px, 1.6vw, 15px); }
+  .nav button::after { bottom: 4px; left: 0; right: 0; }
+  .intro { --intro-unit: min(var(--unit), calc((100vw - var(--inset-left) - var(--inset-right)) / 54.166667)); padding: clamp(76px, 10vw, 110px) var(--inset-right) 0 var(--inset-left); }
+  .introDescription { max-width: 42rem; margin-top: clamp(18px, 4vw, 26px) !important; font-size: clamp(.9375rem, 1.5vw, 1.0625rem); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+  .introLine { white-space: normal; text-wrap: balance; }
+  .introLine + .introLine { margin-top: .4em; }
+  .gallery { margin-top: clamp(32px, 5vw, 52px); }
+  .viewport { padding-left: var(--inset-left); }
+  .rail { gap: clamp(16px, 3vw, 32px); transform: translate3d(0,0,0); }
+  .galleryFooter { flex-wrap: wrap; gap: 16px; padding: 16px var(--inset-right) 28px var(--inset-left); }
+  .gestureHint { font-size: 11px; letter-spacing: 0; gap: 7px; }
+  .galleryControls { flex: none; gap: 8px; margin-left: auto; }
+  .galleryControls button { width: 44px; height: 44px; font-size: 18px; }
+  .galleryControls .pauseButton { width: 74px; font-size: 12px; }
+  .dialog { max-height: calc(100svh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+  .dialogBody { padding: 52px 24px 24px; }
+  .dialog h2 { font-size: clamp(40px, 9vw, 64px); overflow-wrap: anywhere; }
+  .dialogClose { top: 4px; right: 8px; min-width: 44px; min-height: 44px; }
+  .dialogAction { min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .page { --card-width: calc(100vw - var(--inset-left) - var(--inset-right) - 16px); }
+  .atmosphere { height: 420px; }
+  .heatTop, .heatBottom { width: 300%; top: -160px; }
+  .heatBottom { left: -75%; top: 40px; }
+  .heatGlow { height: 300px; }
+}
+@media (max-height: 600px) and (min-aspect-ratio: 1/1) {
+  .intro { padding-top: 64px; }
+  .gallery { margin-top: 32px; }
+}
+@media (hover: none), (pointer: coarse) {
+  .desktopHint { display: none; }
+  .touchHint { display: inline; }
+  .card { transform: none; }
+  .dialog::backdrop { backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::after { animation: none !important; transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+  .rail, .cardSlot, .cardHeading { will-change: auto; }
+  .card { transform: none; }
+  .heatLines i { filter: blur(calc(1.8 * var(--heat-u))); }
+  .heatLines i::after { display: none; }
+}

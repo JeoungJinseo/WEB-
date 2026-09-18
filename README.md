@@ -2,6 +2,22 @@
 
 2026 DDP YOUNG DESIGNER 프로젝트의 반응형 웹사이트입니다. 한 번의 스크롤로 사우나 장면을 이동하며, 정지 장면에서도 몸의 미세한 호흡과 증기 효과가 이어집니다.
 
+## Core values 카드 페이지
+
+최신 핵심 가치 카드 페이지의 소스와 이미지·폰트는 [`core-values/`](core-values/)에 있습니다. 카드 자동 이동, 드래그와 터치 전환, 모바일 성능 최적화, `CHEERFUL LIFE` 문구, 모바일 소개 설명 15px 및 행간 조정이 포함되어 있습니다.
+
+[현재 공개된 카드 페이지 열기](https://oven-sauna-core-values.harry040904.chatgpt.site)
+
+Bun이 설치된 환경에서 실행합니다.
+
+```sh
+cd core-values
+bun install
+bun run dev
+```
+
+`http://localhost:3000/` 또는 `/oven-sauna/`에서 확인할 수 있습니다. `bun run build`는 정적 배포 파일을 `core-values/out/`에 생성합니다. 기존 영상 페이지는 아래의 `dist/` 구조를 계속 사용하며, GitHub Pages 배포 대상도 그대로입니다.
+
 ## 실행 및 수정
 
 `dist/`가 실제 배포되는 웹사이트 소스입니다. 별도의 빌드나 패키지 설치 없이 실행할 수 있습니다.

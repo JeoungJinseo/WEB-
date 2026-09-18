@@ -84,3 +84,19 @@ pnpm dev
 ```
 
 프로덕션 빌드는 `pnpm build`로 실행합니다. 자세한 구성은 [팀 소개 사이트 README](apps/team-gallery/README.md)를 참고하세요. 이 앱은 Sites에서 별도로 호스팅하며, 기존 GitHub Pages 워크플로는 계속 루트의 `dist/`를 배포합니다.
+
+## Young Designers 타이포그래피 사이트
+
+[`apps/young-designers/`](apps/young-designers/)에는 `WE ARE / YOUNG DESIGNERS` 두 줄 타이포그래피, 수증기와 열감 효과, 모바일 위치 조정을 포함한 사이트 소스와 폰트·벡터 에셋이 있습니다.
+
+[현재 공개된 Young Designers 사이트](https://goobne-young-designers.harry040904.chatgpt.site/)
+
+Node.js 22.13 이상과 pnpm으로 실행합니다.
+
+```sh
+cd apps/young-designers
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+빌드와 파일 구성은 [Young Designers README](apps/young-designers/README.md)를 참고하세요. 이 앱도 Sites에서 별도로 호스팅합니다.
